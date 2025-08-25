@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animate Studio - Animation Maker Free</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* Force tooltips to front */
+        [data-tooltip] {
+            position: relative;
+        }
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 999999 !important;
+            pointer-events: none;
+            margin-bottom: 5px;
+        }
+        [data-tooltip]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+            z-index: 999998 !important;
+            pointer-events: none;
+        }
+        /* Top menu high z-index */
+        .top-menu {
+            position: relative;
+            z-index: 10000;
+        }
+        
+        /* Top menu tooltips appear below */
+        .top-menu [data-tooltip]:hover::after {
+            bottom: auto;
+            top: 100%;
+            margin-bottom: 0;
+            margin-top: 5px;
+            z-index: 10001 !important;
+            position: fixed;
+        }
+        .top-menu [data-tooltip]:hover::before {
+            bottom: auto;
+            top: 100%;
+            border-top-color: transparent;
+            border-bottom-color: rgba(0, 0, 0, 0.9);
+            z-index: 10000 !important;
+            position: fixed;
+        }
+        /* Canvas container fit */
+        .canvas-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: #f8f9fa;
+            width: 100%;
+            height: 100%;
+        }
+        .canvas-scroll-area {
+            position: relative;
+            width: 6000px;
+            height: 4000px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .canvas-container-inner {
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            transform-origin: center center;
+        }
+        /* Canvas scaling and quality */
+        #mainCanvas, #overlayCanvas {
+            image-rendering: auto;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: optimize-contrast;
+            display: block;
+        }
+        /* Layer folder styles */
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 2px 4px;
+            margin-right: 4px;
+            font-size: 10px;
+        }
+        .expand-btn:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Menu Bar -->
+    <div class="top-menu">
+        <div class="menu-brand">
+        <i class="fas fa-video"></i>
+            <span>Animate Studio</span>
+        </div>
+        <div class="menu-sections">
+            <div class="menu-group">
+                <button class="menu-btn" id="newBtn" data-tooltip="Create a new animation project">
+                    <i class="fas fa-file-plus"></i>
+                    <span>New</span>
+                </button>
+                <button class="menu-btn" id="saveBtn" data-tooltip="Save current project to file">
+                    <i class="fas fa-save"></i>
+                    <span>Save</span>
+                </button>
+                <button class="menu-btn" id="loadBtn" data-tooltip="Load existing project from file">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Load</span>
+                </button>
+                <button class="menu-btn" id="importImageBtn" data-tooltip="Import image (PNG, GIF, JPEG, JPG) to canvas">
+                    <i class="fas fa-image"></i>
+                    <span>Import</span>
+                </button>
+            </div>
+            <div class="menu-group">
+                <button class="menu-btn" id="undoBtn" data-tooltip="Undo last action (Ctrl+Z)">
+                    <i class="fas fa-undo-alt"></i>
+                </button>
+                <button class="menu-btn" id="redoBtn" data-tooltip="Redo last undone action (Ctrl+Y)">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+                <button class="menu-btn" id="copyBtn" data-tooltip="Copy selected object (Ctrl+C)">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="menu-btn" id="pasteBtn" data-tooltip="Paste copied object (Ctrl+V)">
+                    <i class="fas fa-paste"></i>
+                </button>
+            </div>
+            <div class="menu-group">
+                <button class="menu-btn" id="effectsBtn" data-tooltip="Add animated effects - Fire, Rain, Snow">
+                    <i class="fas fa-magic"></i>
+                    <span>Effects</span>
+                </button>
+                <button class="menu-btn primary" id="exportBtn" data-tooltip="Export animation as PNG sequence for video conversion">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </button>
+            </div>
+        </div>
+        <div class="menu-actions">
+            <button class="menu-btn" id="coffeeBtn" data-tooltip="Support the developer - Buy me a coffee!" style="background: linear-gradient(45deg, #ff6b35, #f7931e); color: white;">
+                <i class="fas fa-coffee"></i>
+                <span>Support</span>
+            </button>
+            <button class="menu-btn icon-only" id="aboutBtn" data-tooltip="About Animate Studio - Version and credits">
+                <i class="fas fa-info-circle"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Toolbar -->
+        <div class="sidebar left-sidebar" style="width: fit-content; min-width: 250px; max-width: 300px;">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-tools"></i> Toolbox</h3>
+            </div>
+            
+            <!-- Drawing Tools -->
+            <div class="tool-section">
+                <h4>Drawing Tools</h4>
+                <div class="tool-grid">
+                    <button class="tool-btn active" data-tool="move" data-tooltip="Select, move, rotate and resize objects">
+                        <i class="fas fa-arrows-alt"></i>
+                        <span>Move</span>
+                    </button>
+                    <button class="tool-btn" data-tool="pencil" data-tooltip="Draw freehand lines and sketches">
+                        <i class="fas fa-pencil-alt"></i>
+                        <span>Pencil</span>
+                    </button>
+                    <button class="tool-btn" data-tool="line" data-tooltip="Draw straight lines - drag to set length and angle">
+                        <i class="fas fa-minus"></i>
+                        <span>Line</span>
+                    </button>
+                    <button class="tool-btn" data-tool="circle" data-tooltip="Draw perfect circles - drag to set size">
+                        <i class="fas fa-circle"></i>
+                        <span>Circle</span>
+                    </button>
+                    <button class="tool-btn" data-tool="semicircle" data-tooltip="Draw half circles and arcs">
+                        <i class="fas fa-adjust"></i>
+                        <span>Half Circle</span>
+                    </button>
+                    <button class="tool-btn" data-tool="square" data-tooltip="Draw rectangles and squares - drag to set dimensions">
+                        <i class="fas fa-square"></i>
+                        <span>Rectangle</span>
+                    </button>
+                    <button class="tool-btn" data-tool="triangle" data-tooltip="Draw triangles - drag to set base and height">
+                        <i class="fas fa-play"></i>
+                        <span>Triangle</span>
+                    </button>
+                    <button class="tool-btn" data-tool="star" data-tooltip="Draw 5-pointed stars - drag to set size">
+                        <i class="fas fa-star"></i>
+                        <span>Star</span>
+                    </button>
+                    <button class="tool-btn" data-tool="arrow" data-tooltip="Draw arrows with arrowheads - drag to set direction">
+                        <i class="fas fa-location-arrow"></i>
+                        <span>Arrow</span>
+                    </button>
+                    <button class="tool-btn" data-tool="text" data-tooltip="Add text labels - click to place text">
+                        <i class="fas fa-font"></i>
+                        <span>Text</span>
+                    </button>
+                    <button class="tool-btn" data-tool="eraser" data-tooltip="Erase parts of drawings - drag to erase">
+                        <i class="fas fa-eraser"></i>
+                        <span>Eraser</span>
+                    </button>
+                    <button class="tool-btn" data-tool="flood-fill" data-tooltip="Fill shapes with color - click to fill">
+                        <i class="fas fa-fill-drip"></i>
+                        <span>Fill</span>
+                    </button>
+
+                    <button class="tool-btn" data-tool="zoom-in" data-tooltip="Zoom in - click canvas to zoom in, or use mouse wheel">
+                        <i class="fas fa-search-plus"></i>
+                        <span>Zoom In</span>
+                    </button>
+                    <button class="tool-btn" data-tool="zoom-out" data-tooltip="Zoom out - click canvas to zoom out, or use mouse wheel">
+                        <i class="fas fa-search-minus"></i>
+                        <span>Zoom Out</span>
+                    </button>
+                    <button class="tool-btn" data-tool="zoom-reset" data-tooltip="Reset zoom to 100% - click to return to normal view">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                        <span>Reset Zoom</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Color Palette -->
+            <div class="tool-section">
+                <h4>Color Palette</h4>
+                <div class="color-section">
+                    <div class="color-inputs">
+                        <div class="color-input-group">
+                            <label>Primary</label>
+                            <input type="color" id="primaryColor" value="#4f46e5">
+                        </div>
+                        <div class="color-input-group">
+                            <label>Secondary</label>
+                            <input type="color" id="secondaryColor" value="#ffffff">
+                        </div>
+                    </div>
+                    <div class="color-presets">
+                        <div class="preset-color" style="background: #ef4444;" data-color="#ef4444"></div>
+                        <div class="preset-color" style="background: #f97316;" data-color="#f97316"></div>
+                        <div class="preset-color" style="background: #eab308;" data-color="#eab308"></div>
+                        <div class="preset-color" style="background: #22c55e;" data-color="#22c55e"></div>
+                        <div class="preset-color" style="background: #06b6d4;" data-color="#06b6d4"></div>
+                        <div class="preset-color" style="background: #8b5cf6;" data-color="#8b5cf6"></div>
+                        <div class="preset-color" style="background: #ec4899;" data-color="#ec4899"></div>
+                        <div class="preset-color" style="background: #000000;" data-color="#000000"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brush Settings -->
+            <div class="tool-section">
+                <h4>Brush Settings</h4>
+                <div class="setting-group">
+                    <label>Size: <span id="brushSizeValue">5</span>px</label>
+                    <input type="range" id="brushSize" min="1" max="50" value="5" class="modern-slider">
+                </div>
+                <div class="setting-group">
+                    <label>Opacity: <span id="opacityValue">100</span>%</label>
+                    <input type="range" id="opacity" min="10" max="100" value="100" class="modern-slider">
+                </div>
+            </div>
+
+            <!-- Text Settings -->
+            <div class="tool-section">
+                <h4>Text Settings</h4>
+                <div class="setting-group">
+                    <label>Size: <span id="fontSizeValue">24</span>px</label>
+                    <input type="range" id="fontSize" min="10" max="100" value="24" class="modern-slider">
+                </div>
+                <div class="setting-group">
+                    <label>Font Family:</label>
+                    <select id="fontFamily" class="modern-select">
+                        <option value="Inter">Inter</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Helvetica">Helvetica</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-container">
+            <div class="canvas-scroll-area">
+                <div class="canvas-container-inner" style="background: #f0f0f0; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <canvas id="mainCanvas" width="1920" height="1080" style="display: block; background: white;"></canvas>
+                    <canvas id="overlayCanvas" width="1920" height="1080" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar right-sidebar" style="width: fit-content; min-width: 280px; max-width: 350px;">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="layers">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Layers</span>
+                </button>
+                <button class="tab-btn" data-tab="frames">
+                    <i class="fas fa-film"></i>
+                    <span>Frames</span>
+                </button>
+            </div>
+
+            <!-- Layers Tab -->
+            <div class="tab-content active" id="layers-tab">
+                <div class="section-header">
+                    <h4>Layers</h4>
+                    <div class="header-actions">
+                        <button class="action-btn" id="addLayerBtn" data-tooltip="Group selected objects into a layer">
+                            <i class="fas fa-layer-group"></i>
+                        </button>
+                        <button class="action-btn" id="moveToFrontBtn" data-tooltip="Move selected layer to front (top)">
+                            <i class="fas fa-angle-double-up"></i>
+                        </button>
+                        <button class="action-btn" id="moveUpBtn" data-tooltip="Move selected layer up one position">
+                            <i class="fas fa-angle-up"></i>
+                        </button>
+                        <button class="action-btn" id="moveDownBtn" data-tooltip="Move selected layer down one position">
+                            <i class="fas fa-angle-down"></i>
+                        </button>
+                        <button class="action-btn" id="moveToBackBtn" data-tooltip="Move selected layer to back (bottom)">
+                            <i class="fas fa-angle-double-down"></i>
+                        </button>
+                        <button class="action-btn" id="removeLayerBtn" data-tooltip="Delete selected layer permanently">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="layers-list" id="layersList">
+                    <!-- Layers will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Frames Tab -->
+            <div class="tab-content" id="frames-tab">
+                <div class="section-header">
+                    <h4>Animation</h4>
+                    <div class="header-actions">
+                        <button class="action-btn" id="addFrameBtn" data-tooltip="Add new frame to animation timeline">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-btn" id="removeFrameBtn" data-tooltip="Delete current frame from timeline">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="action-btn" id="copyFrameBtn" data-tooltip="Duplicate current frame with all objects">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="canvas-info">
+                    <span>Frame: <span id="currentFrameDisplay">1</span>/<span id="totalFramesDisplay">1</span></span>
+                    <span id="zoomDisplay">Zoom: 100%</span>
+                    <span>|</span>
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 12px;">
+                        <input type="checkbox" id="backgroundToggle" style="margin: 0;">
+                        <span>BG:</span>
+                        <input type="color" id="backgroundColor" value="#ffffff" style="width: 25px; height: 18px; border: none; cursor: pointer;">
+                        <input type="checkbox" id="allFramesToggle" style="margin: 0 0 0 8px;">
+                        <span>All</span>
+                    </label>
+                </div>
+                
+                <div class="canvas-actions">
+                    <button class="action-btn" id="zoomInBtn" data-tooltip="Zoom in to see more detail">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="action-btn" id="zoomOutBtn" data-tooltip="Zoom out to see more of canvas">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="action-btn" id="zoomResetBtn" data-tooltip="Reset zoom to 100% normal view">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="action-btn" id="fitScreenBtn" data-tooltip="Fit canvas to screen - scale to fit container">
+                        <i class="fas fa-compress-arrows-alt"></i>
+                    </button>
+                    <label class="onion-skin-label action-btn" data-tooltip="Show previous/next frames as ghosts for animation reference">
+                        <input type="checkbox" id="onionSkinToggle" checked>
+                        <i class="fas fa-eye"></i>
+                    </label>
+                </div>
+                
+                <div class="frames-timeline" id="framesTimeline">
+                    <!-- Frame thumbnails will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Playback Bar -->
+    <div class="playback-bar">
+        <div class="playback-controls">
+            <button class="playback-btn" id="prevFrameBtn" data-tooltip="Go to previous frame in timeline">
+                <i class="fas fa-step-backward"></i>
+            </button>
+            <button class="playback-btn play-btn" id="playBtn" data-tooltip="Play animation or pause if playing">
+                <i class="fas fa-play"></i>
+            </button>
+            <button class="playback-btn" id="nextFrameBtn" data-tooltip="Go to next frame in timeline">
+                <i class="fas fa-step-forward"></i>
+            </button>
+            <button class="playback-btn" id="stopBtn" data-tooltip="Stop animation and return to first frame">
+                <i class="fas fa-stop"></i>
+            </button>
+        </div>
+        
+        <div class="playback-info">
+            <span>FPS: <span id="fpsDisplay">12</span></span>
+        </div>
+        
+        <div class="playback-settings">
+            <label>Speed:</label>
+            <input type="range" id="playbackSpeed" min="1" max="60" value="12" class="modern-slider">
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> About Animate Studio</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="about-content">
+                    <div class="version-info">
+                        <span class="version-badge">v1.0.0</span>
+                        <span class="status-badge">Free</span>
+                    </div>
+                    <p class="description">
+                        For test only, thank you!
+                    </p>
+                    <p class="description">
+                        Coded by Richard Noble
+                    </p>
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <i class="fas fa-paint-brush"></i>
+                            <span>Advanced Drawing Tools</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Layer Management</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-film"></i>
+                            <span>Frame Animation</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-arrows-alt"></i>
+                            <span>Transform Tools</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-download"></i>
+                            <span>Export Options</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-undo"></i>
+                            <span>Undo/Redo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="modal" style="display: block;">
+        <div class="modal-content" style="max-width: 600px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: transparent; border: none; text-align: center; padding: 30px 30px 20px;">
+                <h1 style="margin: 0; font-size: 2.5em; text-shadow: 0 2px 10px rgba(0,0,0,0.3);"><i class="fas fa-magic" style="color: #ffd700;"></i> Welcome to Animate Studio!</h1>
+            </div>
+            <div class="modal-body" style="padding: 0 30px 30px; text-align: center;">
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin: 20px 0; backdrop-filter: blur(10px);">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px;">
+                        <i class="fas fa-heart" style="color: #ff6b6b; font-size: 2em;"></i>
+                        <h2 style="margin: 0; font-size: 1.8em;">Thank You for Testing!</h2>
+                        <i class="fas fa-star" style="color: #ffd700; font-size: 2em;"></i>
+                    </div>
+                    <p style="font-size: 1.2em; margin: 15px 0; line-height: 1.6;">This professional animation studio is <strong>completely FREE</strong> and always will be!</p>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 0; font-size: 1.1em;"><i class="fas fa-code" style="color: #4ecdc4;"></i> <strong>Coded by Richard Noble</strong></p>
+                        <p style="margin: 5px 0 0; opacity: 0.9;">Built with passion for the animation community</p>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(45deg, #ff6b35, #f7931e); border-radius: 15px; padding: 20px; margin: 25px 0; box-shadow: 0 5px 15px rgba(255,107,53,0.3);">
+                    <h3 style="margin: 0 0 10px; display: flex; align-items: center; justify-content: center; gap: 10px;"><i class="fas fa-coffee"></i> Support the Project</h3>
+                    <p style="margin: 0 0 15px; opacity: 0.95;">If you enjoy using Animate Studio, consider buying me a coffee!</p>
+                    <button id="supportBtn" style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer;">☕ Buy Me a Coffee</button>
+                </div>
+                <button id="welcomeCloseBtn" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 15px 30px; border-radius: 25px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 20px;">🚀 Start Creating!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Effects Modal -->
+    <div id="effectsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-magic"></i> Animated Effects</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+                    <button id="fireEffectBtn" style="background: linear-gradient(135deg, #ff6b35, #ff4500); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-fire" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Fire</strong>
+                        <br><small>Animated flames</small>
+                    </button>
+                    <button id="rainEffectBtn" style="background: linear-gradient(135deg, #4a90e2, #357abd); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-cloud-rain" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Rain</strong>
+                        <br><small>Falling raindrops</small>
+                    </button>
+                    <button id="snowEffectBtn" style="background: linear-gradient(135deg, #e6f3ff, #b3d9ff); color: #333; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-snowflake" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Snow</strong>
+                        <br><small>Falling snowflakes</small>
+                    </button>
+                    <button id="lightningEffectBtn" style="background: linear-gradient(135deg, #ffd700, #ffb347); color: #333; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-bolt" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Lightning</strong>
+                        <br><small>Electric flashes</small>
+                    </button>
+                    <button id="lightBeamEffectBtn" style="background: linear-gradient(135deg, #ffff99, #ffffcc); color: #333; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-sun" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Light Beam</strong>
+                        <br><small>Radial light rays</small>
+                    </button>
+                    <button id="smokeEffectBtn" style="background: linear-gradient(135deg, #666, #999); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-smog" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Smoke</strong>
+                        <br><small>Rising smoke</small>
+                    </button>
+                    <button id="fogEffectBtn" style="background: linear-gradient(135deg, #b0c4de, #d3d3d3); color: #333; border: none; padding: 15px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">
+                        <i class="fas fa-cloud" style="font-size: 1.5em; margin-bottom: 8px;"></i>
+                        <br><strong>Fog</strong>
+                        <br><small>Drifting mist</small>
+                    </button>
+                </div>
+                <div id="effectSettings" style="display: none; margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                    <h4 style="margin: 0 0 15px;">Effect Settings</h4>
+                    <div style="margin-bottom: 15px;">
+                        <label>Intensity:</label>
+                        <select id="intensitySelect" style="width: 100%; padding: 8px; margin-top: 5px;">
+                            <option value="light">Light</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="heavy">Heavy</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label>Speed: <span id="effectSpeedValue">50</span>%</label>
+                        <input type="range" id="effectSpeed" min="20" max="100" value="50" style="width: 100%; margin-top: 5px;">
+                    </div>
+                    <div style="text-align: center;">
+                        <button id="applyEffectBtn" style="background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Apply Effect</button>
+                        <button id="cancelEffectBtn" style="background: #ccc; color: #333; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fire Settings Modal -->
+    <div id="fireSettingsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-fire"></i> Fire Effect Settings</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <input type="checkbox" id="fireGlow" style="margin-right: 10px;">
+                        <i class="fas fa-sun" style="color: #ffa500; margin-right: 8px;"></i>
+                        <strong>Add Glow Effect</strong>
+                        <small style="margin-left: 10px; color: #666;">(Orange glow around fire)</small>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Animation Speed: <span id="fireSpeedValue">50</span>%</strong></label>
+                    <input type="range" id="fireSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 5px;">
+                        <span>Slow</span>
+                        <span>Fast</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <input type="checkbox" id="fireAnimation" checked style="margin-right: 10px;">
+                        <i class="fas fa-play" style="color: #22c55e; margin-right: 8px;"></i>
+                        <strong>Enable Animation</strong>
+                        <small style="margin-left: 10px; color: #666;">(Animate the fire GIF)</small>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" id="fireFrames" style="margin-right: 10px;">
+                        <i class="fas fa-film" style="color: #4f46e5; margin-right: 8px;"></i>
+                        <strong>Add to Timeline Frames</strong>
+                        <small style="margin-left: 10px; color: #666;">(Create animation frames)</small>
+                    </label>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button id="applyFireBtn" style="background: linear-gradient(135deg, #ff6b35, #ff4500); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; margin-right: 10px; font-weight: bold;">
+                        <i class="fas fa-fire"></i> Create Fire Effect
+                    </button>
+                    <button id="cancelFireBtn" style="background: #ccc; color: #333; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rain Settings Modal -->
+    <div id="rainSettingsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-cloud-rain"></i> Rain Effect Settings</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <input type="checkbox" id="rainSplash" checked style="margin-right: 10px;">
+                        <i class="fas fa-water" style="color: #3b82f6; margin-right: 8px;"></i>
+                        <strong>Add Splash Effects</strong>
+                        <small style="margin-left: 10px; color: #666;">(Water splashes on ground)</small>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Speed: <span id="rainSpeedValue">50</span>%</strong></label>
+                    <input type="range" id="rainSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Rain Size: <span id="rainSizeValue">Medium</span></strong></label>
+                    <select id="rainSize" style="width: 100%; padding: 8px; margin-top: 8px;">
+                        <option value="small">Small Drops</option>
+                        <option value="medium" selected>Medium Drops</option>
+                        <option value="large">Large Drops</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Wind Direction</strong></label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="windDirection" value="left" style="margin-right: 5px;">
+                            <i class="fas fa-arrow-left"></i> Left
+                        </label>
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="windDirection" value="none" checked style="margin-right: 5px;">
+                            <i class="fas fa-arrow-down"></i> None
+                        </label>
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="windDirection" value="right" style="margin-right: 5px;">
+                            <i class="fas fa-arrow-right"></i> Right
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Rain Color</strong></label>
+                    <input type="color" id="rainColor" value="#3b82f6" style="width: 100%; height: 40px; margin-top: 8px;">
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" id="rainFrames" style="margin-right: 10px;">
+                        <i class="fas fa-film" style="color: #4f46e5; margin-right: 8px;"></i>
+                        <strong>Add to Timeline Frames</strong>
+                        <small style="margin-left: 10px; color: #666;">(Create animation frames)</small>
+                    </label>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button id="applyRainBtn" style="background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; margin-right: 10px; font-weight: bold;">
+                        <i class="fas fa-cloud-rain"></i> Create Rain Effect
+                    </button>
+                    <button id="cancelRainBtn" style="background: #ccc; color: #333; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snow Settings Modal -->
+    <div id="snowSettingsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-snowflake"></i> Snow Effect Settings</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Speed: <span id="snowSpeedValue">50</span>%</strong></label>
+                    <input type="range" id="snowSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Snow Size: <span id="snowSizeValue">Medium</span></strong></label>
+                    <select id="snowSize" style="width: 100%; padding: 8px; margin-top: 8px;">
+                        <option value="small">Small Flakes</option>
+                        <option value="medium" selected>Medium Flakes</option>
+                        <option value="large">Large Flakes</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Wind Direction</strong></label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="snowWindDirection" value="left" style="margin-right: 5px;">
+                            <i class="fas fa-arrow-left"></i> Left
+                        </label>
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="snowWindDirection" value="none" checked style="margin-right: 5px;">
+                            <i class="fas fa-arrow-down"></i> None
+                        </label>
+                        <label style="flex: 1; text-align: center;">
+                            <input type="radio" name="snowWindDirection" value="right" style="margin-right: 5px;">
+                            <i class="fas fa-arrow-right"></i> Right
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label><strong>Snow Color</strong></label>
+                    <input type="color" id="snowColor" value="#ffffff" style="width: 100%; height: 40px; margin-top: 8px;">
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" id="snowFrames" style="margin-right: 10px;">
+                        <i class="fas fa-film" style="color: #4f46e5; margin-right: 8px;"></i>
+                        <strong>Add to Timeline Frames</strong>
+                        <small style="margin-left: 10px; color: #666;">(Create animation frames)</small>
+                    </label>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button id="applySnowBtn" style="background: linear-gradient(135deg, #87ceeb, #4682b4); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; margin-right: 10px; font-weight: bold;">
+                        <i class="fas fa-snowflake"></i> Create Snow Effect
+                    </button>
+                    <button id="cancelSnowBtn" style="background: #ccc; color: #333; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="script_new.js"></script>
+</body>
+</html>ption>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="canvas-container">
+            <div class="canvas-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; position: relative; z-index: 100;">
+                <div class="canvas-info" style="display: flex; align-items: center; gap: 15px; font-size: 14px;">
+                    <span>Canvas: 800x600px</span>
+                    <span>|</span>
+                    <span id="zoomDisplay">Zoom: 100%</span>
+                    <span>|</span>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="backgroundToggle" style="margin: 0;">
+                        <span>Background:</span>
+                        <input type="color" id="backgroundColor" value="#ffffff" style="width: 30px; height: 20px; border: none; cursor: pointer;">
+                        <input type="checkbox" id="allFramesToggle" style="margin: 0 0 0 10px;">
+                        <span>All Frames</span>
+                    </label>
+                </div>
+                <div class="canvas-actions">
+                    <button class="action-btn" id="zoomInBtn" data-tooltip="Zoom In">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="action-btn" id="zoomOutBtn" data-tooltip="Zoom Out">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="action-btn" id="zoomResetBtn" data-tooltip="Fit to Screen">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="action-btn" id="onionSkinToggle" data-tooltip="Toggle Onion Skin">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="canvas-wrapper" style="position:relative; width:800px; height:600px;">
+                <div class="canvas-container-inner" style="position:relative; width:800px; height:600px;">
+                    <canvas id="mainCanvas" width="800" height="600" style="position:absolute; left:0; top:0; z-index:1; background:transparent;"></canvas>
+                    <canvas id="overlayCanvas" width="800" height="600" style="position:absolute; left:0; top:0; z-index:2; pointer-events:none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Layers & Animation -->
+        <div class="sidebar right-sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="layers">
+                    <i class="fas fa-layer-group"></i>
+                    Layers
+                </button>
+                <button class="tab-btn" data-tab="animation">
+                    <i class="fas fa-film"></i>
+                    Animation
+                </button>
+            </div>
+
+            <!-- Layers Panel -->
+            <div class="tab-content active" id="layers-tab">
+                <div class="section-header">
+                    <h4>Layers</h4>
+                    <div class="header-actions">
+                        <button class="action-btn" id="addLayerBtn" data-tooltip="Add Layer">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-btn" id="moveToFrontBtn" data-tooltip="Move to Front">
+                            <i class="fas fa-angle-double-up"></i>
+                        </button>
+                        <button class="action-btn" id="moveUpBtn" data-tooltip="Move Up">
+                            <i class="fas fa-angle-up"></i>
+                        </button>
+                        <button class="action-btn" id="moveDownBtn" data-tooltip="Move Down">
+                            <i class="fas fa-angle-down"></i>
+                        </button>
+                        <button class="action-btn" id="moveToBackBtn" data-tooltip="Move to Back">
+                            <i class="fas fa-angle-double-down"></i>
+                        </button>
+                        <button class="action-btn" id="removeLayerBtn" data-tooltip="Remove Layer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="layers-list" id="layersList">
+                    <!-- Layers will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Animation Panel -->
+            <div class="tab-content" id="animation-tab">
+                <div class="section-header">
+                    <h4>Animation Settings</h4>
+                </div>
+                <div style="padding: 20px; text-align: center; color: #6c757d;">
+                    <i class="fas fa-arrow-down" style="font-size: 2em; margin-bottom: 10px;"></i>
+                    <p>Animation timeline is now at the bottom of the screen for better workflow.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Animation Timeline -->
+    <div class="animation-timeline-bar" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-top: 1px solid #dee2e6; padding: 15px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
+        <!-- Timeline Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h4 style="margin: 0; color: #495057; display: flex; align-items: center; gap: 8px;"><i class="fas fa-film" style="color: #6f42c1;"></i> Animation Timeline</h4>
+                <div class="playback-info" style="background: rgba(111, 66, 193, 0.1); padding: 5px 12px; border-radius: 20px; font-size: 14px; color: #6f42c1; font-weight: 500;">
+                    <span>Frame: <span id="currentFrameDisplay">1</span>/<span id="totalFramesDisplay">1</span></span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="frame-actions" style="display: flex; gap: 5px;">
+                    <button class="action-btn" id="addFrameBtn" data-tooltip="Add Frame" style="background: #28a745; color: white;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="action-btn" id="copyFrameBtn" data-tooltip="Duplicate Frame" style="background: #17a2b8; color: white;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="action-btn" id="removeFrameBtn" data-tooltip="Remove Frame" style="background: #dc3545; color: white;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="playback-controls" style="display: flex; gap: 5px; margin-left: 15px;">
+                    <button class="playback-btn" id="prevFrameBtn" data-tooltip="Previous Frame">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button class="playback-btn play-btn" id="playBtn" data-tooltip="Play Animation">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="playback-btn" id="stopBtn" data-tooltip="Stop Animation">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button class="playback-btn" id="nextFrameBtn" data-tooltip="Next Frame">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                </div>
+                <div class="playback-settings" style="display: flex; align-items: center; gap: 10px; margin-left: 15px;">
+                    <label style="font-size: 14px; color: #6c757d;">Speed: <span id="speedValue" style="color: #495057; font-weight: 500;">12</span> FPS</label>
+                    <input type="range" id="playbackSpeed" min="1" max="60" value="12" class="modern-slider" style="width: 100px;">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Frames Timeline -->
+        <div class="frames-timeline-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+            <div class="frames-timeline" id="framesTimeline" style="display: flex; gap: 10px; overflow-x: auto; padding: 5px;">
+                <!-- Frame thumbnails will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-magic"></i> Animate Studio</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="about-content">
+                    <div class="version-info">
+                        <span class="version-badge">Version 2.0.0</span>
+                        <span class="status-badge">Professional</span>
+                    </div>
+                    <p class="description">
+                        Create stunning animations with our professional-grade animation studio. 
+                        Built for artists, designers, and animation enthusiasts.
+                    </p>
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Multi-layer Support</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-film"></i>
+                            <span>Frame Animation</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-paint-brush"></i>
+                            <span>Professional Tools</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-download"></i>
+                            <span>Export Options</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-undo"></i>
+                            <span>Undo/Redo</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-palette"></i>
+                            <span>Color Management</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu" style="display: none; position: fixed; background: white; border: 1px solid #ccc; border-radius: 5px; padding: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;">
+        <div class="context-item" id="contextBackground" style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="contextBackgroundToggle" style="margin: 0;">
+            <span>Background</span>
+            <input type="color" id="contextBackgroundColor" value="#ffffff" style="width: 20px; height: 20px; border: none; cursor: pointer;">
+        </div>
+        <div class="context-item" id="contextAllFrames" style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="contextAllFramesToggle" style="margin: 0;">
+            <span>Apply to All Frames</span>
+        </div>
+    </div>
+
+    <!-- Coming Soon Modal -->
+    <div id="comingSoonModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: transparent; border: none; text-align: center; padding: 30px 30px 20px;">
+                <h2 style="margin: 0; font-size: 2em; text-shadow: 0 2px 10px rgba(0,0,0,0.3);"><i class="fas fa-rocket" style="color: #ffd700;"></i> Coming Soon!</h2>
+            </div>
+            <div class="modal-body" style="padding: 0 30px 30px; text-align: center;">
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin: 20px 0; backdrop-filter: blur(10px);">
+                    <h3 style="margin: 0 0 15px; font-size: 1.5em;">Update Features Effect</h3>
+                    <p style="font-size: 1.1em; margin: 15px 0; line-height: 1.6;">Currently only <strong>Rain</strong> and <strong>Snow</strong> effects are available.</p>
+                    <p style="font-size: 1em; margin: 15px 0; opacity: 0.9;">We will update with fancy effects soon!</p>
+                </div>
+                <button id="comingSoonCloseBtn" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 12px 25px; border-radius: 25px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 15px;">✨ Got It!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="script_new.js"></script>
+    
+    <!-- Update display values for sliders -->
+    <script>
+        document.getElementById('brushSize').addEventListener('input', function() {
+            document.getElementById('brushSizeValue').textContent = this.value;
+        });
+        
+        document.getElementById('fontSize').addEventListener('input', function() {
+            document.getElementById('fontSizeValue').textContent = this.value;
+        });
+        
+        document.getElementById('playbackSpeed').addEventListener('input', function() {
+            document.getElementById('speedValue').textContent = this.value;
+        });
+    </script>
+</body>
+</html>
+    <input type="file" id="imageInput" accept=".png,.gif,.jpeg,.jpg" style="display: none;">
