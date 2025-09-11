@@ -609,6 +609,9 @@ class AnimationMaker {
                 this.updateMoveToolCursor(e);
             }
         });
+        
+        // Tablet bottom navigation
+        this.setupTabletNavigation();
     }
 
     // Object management
@@ -4317,6 +4320,7 @@ class AnimationMaker {
         
         if (this.deviceType === 'tablet') {
             this.setupTabletSupport();
+            this.setupTabletNavigation();
         }
     }
     
@@ -4389,19 +4393,11 @@ class AnimationMaker {
         // Touch-friendly toolbar
         this.setupTouchToolbar();
         
-        // Initialize tablet bottom tabs
-        this.initTabletBottomTabs();
-        
         document.documentElement.style.setProperty('--touch-size', '48px');
     }
     
-    initTabletBottomTabs() {
-        if (this.deviceType !== 'tablet') return;
-        
-        // Show tablet tabs
-        document.getElementById('tabletBottomTabs').style.display = 'block';
-        
-        // Setup tab switching
+    setupTabletNavigation() {
+        // Tab switching
         document.querySelectorAll('.bottom-tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tabName = btn.dataset.tab;
@@ -4409,85 +4405,250 @@ class AnimationMaker {
                 // Update tab buttons
                 document.querySelectorAll('.bottom-tab-btn').forEach(b => {
                     b.classList.remove('active');
-                    b.style.color = 'rgba(255,255,255,0.7)';
-                    b.style.borderBottomColor = 'transparent';
                 });
-                
                 btn.classList.add('active');
-                btn.style.color = 'white';
-                btn.style.borderBottomColor = '#ffd700';
                 
                 // Update tab content
                 document.querySelectorAll('.bottom-tab-content').forEach(content => {
-                    content.style.display = 'none';
+                    content.classList.remove('active');
                 });
+                document.getElementById(`bottom-${tabName}-tab`).classList.add('active');
                 
-                document.getElementById(`bottom-${tabName}-tab`).style.display = 'block';
-                
-                // Populate content
-                if (tabName === 'drawing') this.populateBottomDrawingTools();
+                // Update layers list when switching to layers tab
+                if (tabName === 'layers') {
+                    this.updateTabletLayersList();
+                }
             });
         });
         
-        // Connect buttons
-        document.getElementById('bottomAddFrameBtn').addEventListener('click', () => this.addFrame());
-        document.getElementById('bottomCopyFrameBtn').addEventListener('click', () => this.copyFrame());
-        
-        this.populateBottomDrawingTools();
-    }
-    
-    populateBottomDrawingTools() {
-        const toolGrid = document.getElementById('bottomToolGrid');
-        if (!toolGrid) return;
-        
-        const tools = [
-            { tool: 'move', icon: 'fas fa-arrows-alt', name: 'Move' },
-            { tool: 'pencil', icon: 'fas fa-pencil-alt', name: 'Pencil' },
-            { tool: 'line', icon: 'fas fa-minus', name: 'Line' },
-            { tool: 'circle', icon: 'fas fa-circle', name: 'Circle' },
-            { tool: 'square', icon: 'fas fa-square', name: 'Square' },
-            { tool: 'triangle', icon: 'fas fa-play', name: 'Triangle' },
-            { tool: 'text', icon: 'fas fa-font', name: 'Text' },
-            { tool: 'eraser', icon: 'fas fa-eraser', name: 'Eraser' }
-        ];
-        
-        toolGrid.innerHTML = tools.map(t => `
-            <button class="bottom-tool-btn" data-tool="${t.tool}" style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                <i class="${t.icon}" style="font-size: 18px;"></i>
-                <span style="font-size: 10px;">${t.name}</span>
-            </button>
-        `).join('');
-        
-        // Add tool handlers
-        document.querySelectorAll('.bottom-tool-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.setTool(btn.dataset.tool);
-                document.querySelectorAll('.bottom-tool-btn').forEach(b => {
-                    b.style.background = 'rgba(255,255,255,0.1)';
+        // Drawing tools
+        document.querySelectorAll('.tablet-tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tablet-tool-btn').forEach(b => {
+                    b.classList.remove('active');
                 });
-                btn.style.background = 'rgba(255,215,0,0.2)';
+                btn.classList.add('active');
+                this.currentTool = btn.dataset.tool;
+                this.updateCanvasCursor();
+                
+                // Sync with desktop toolbar
+                document.querySelectorAll('.tool-btn').forEach(desktopBtn => {
+                    desktopBtn.classList.remove('active');
+                    if (desktopBtn.dataset.tool === this.currentTool) {
+                        desktopBtn.classList.add('active');
+                    }
+                });
             });
         });
         
-        // Connect controls
-        const colorInput = document.getElementById('bottomPrimaryColor');
-        const sizeInput = document.getElementById('bottomBrushSize');
-        const sizeValue = document.getElementById('bottomBrushSizeValue');
+        // Color and brush controls
+        const tabletColor = document.getElementById('tabletPrimaryColor');
+        const tabletBrushSize = document.getElementById('tabletBrushSize');
+        const tabletOpacity = document.getElementById('tabletOpacity');
         
-        if (colorInput) {
-            colorInput.addEventListener('change', (e) => {
+        if (tabletColor) {
+            tabletColor.addEventListener('input', (e) => {
                 this.primaryColor = e.target.value;
                 document.getElementById('primaryColor').value = e.target.value;
             });
         }
         
-        if (sizeInput) {
-            sizeInput.addEventListener('input', (e) => {
+        if (tabletBrushSize) {
+            tabletBrushSize.addEventListener('input', (e) => {
                 this.brushSize = parseInt(e.target.value);
+                document.getElementById('tabletBrushSizeValue').textContent = e.target.value;
                 document.getElementById('brushSize').value = e.target.value;
                 document.getElementById('brushSizeValue').textContent = e.target.value;
-                if (sizeValue) sizeValue.textContent = e.target.value;
             });
+        }
+        
+        if (tabletOpacity) {
+            tabletOpacity.addEventListener('input', (e) => {
+                this.opacity = parseInt(e.target.value) / 100;
+                document.getElementById('tabletOpacityValue').textContent = e.target.value;
+                document.getElementById('opacity').value = e.target.value;
+                document.getElementById('opacityValue').textContent = e.target.value;
+            });
+        }
+        
+        // Frame controls
+        document.getElementById('tabletAddFrameBtn').addEventListener('click', () => this.addFrame());
+        document.getElementById('tabletCopyFrameBtn').addEventListener('click', () => this.duplicateFrame());
+        document.getElementById('tabletRemoveFrameBtn').addEventListener('click', () => this.removeFrame());
+        
+        // Playback controls
+        document.getElementById('tabletPlayBtn').addEventListener('click', () => {
+            this.togglePlayback();
+            this.updateTabletPlayButton();
+        });
+        document.getElementById('tabletPrevFrameBtn').addEventListener('click', () => this.previousFrame());
+        document.getElementById('tabletNextFrameBtn').addEventListener('click', () => this.nextFrame());
+        
+        // Onion skinning
+        const tabletOnionToggle = document.getElementById('tabletOnionSkinToggle');
+        if (tabletOnionToggle) {
+            tabletOnionToggle.addEventListener('change', (e) => {
+                this.onionSkinEnabled = e.target.checked;
+                // Sync with desktop toggle
+                document.querySelectorAll('#onionSkinToggle').forEach(toggle => {
+                    toggle.checked = e.target.checked;
+                });
+                this.redrawCanvas();
+            });
+        }
+        
+        // Playback speed
+        const tabletSpeed = document.getElementById('tabletPlaybackSpeed');
+        if (tabletSpeed) {
+            tabletSpeed.addEventListener('input', (e) => {
+                this.playbackSpeed = parseInt(e.target.value);
+                document.getElementById('tabletSpeedValue').textContent = e.target.value;
+                // Sync with desktop controls
+                document.querySelectorAll('#speedValue').forEach(display => {
+                    display.textContent = e.target.value;
+                });
+                document.getElementById('playbackSpeed').value = e.target.value;
+                
+                if (this.isPlaying) {
+                    clearInterval(this.playInterval);
+                    this.playInterval = setInterval(() => {
+                        this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+                        this.loadFrame(this.currentFrame);
+                    }, 1000 / this.playbackSpeed);
+                }
+            });
+        }
+        
+        // Layer controls
+        document.getElementById('tabletAddLayerBtn').addEventListener('click', () => this.createGroup());
+        document.getElementById('tabletMoveUpBtn').addEventListener('click', () => this.moveUp());
+        document.getElementById('tabletMoveDownBtn').addEventListener('click', () => this.moveDown());
+        document.getElementById('tabletDeleteLayerBtn').addEventListener('click', () => this.deleteSelectedObject());
+        
+        // Settings controls
+        document.getElementById('tabletSaveBtn').addEventListener('click', () => this.saveProject());
+        document.getElementById('tabletLoadBtn').addEventListener('click', () => this.loadProject());
+        document.getElementById('tabletExportBtn').addEventListener('click', () => this.exportVideo());
+    }
+    
+    updateTabletPlayButton() {
+        const playBtn = document.getElementById('tabletPlayBtn');
+        if (playBtn) {
+            if (this.isPlaying) {
+                playBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            } else {
+                playBtn.innerHTML = '<i class="fas fa-play"></i> Play';
+            }
+        }
+    }
+    
+    updateTabletLayersList() {
+        const layersList = document.getElementById('tabletLayersList');
+        if (!layersList) return;
+        
+        layersList.innerHTML = '';
+        const objects = this.frames[this.currentFrame].objects;
+        
+        objects.forEach((obj, index) => {
+            const layerDiv = document.createElement('div');
+            layerDiv.className = 'tablet-layer-item';
+            if (this.selectedObject && this.selectedObject.id === obj.id) {
+                layerDiv.classList.add('selected');
+            }
+            
+            layerDiv.innerHTML = `
+                <i class="${this.getObjectIcon(obj.type)}"></i>
+                <span>${obj.name || obj.type + ' ' + obj.id}</span>
+                <div style="margin-left: auto;">
+                    <i class="fas fa-eye" style="opacity: ${obj.visible ? 1 : 0.3};"></i>
+                </div>
+            `;
+            
+            layerDiv.addEventListener('click', () => {
+                this.selectedObject = obj;
+                this.updateTabletLayersList();
+                this.updateObjectsList();
+                this.redrawCanvas();
+            });
+            
+            layersList.appendChild(layerDiv);
+        });
+    }
+    
+    // Override methods to sync tablet controls
+    togglePlayback() {
+        if (this.isPlaying) {
+            this.stopPlayback();
+        } else {
+            this.startPlayback();
+        }
+        this.updateTabletPlayButton();
+    }
+    
+    addFrame() {
+        this.frames.push({ 
+            objects: [],
+            name: `Frame ${this.frames.length + 1}`
+        });
+        this.currentFrame = this.frames.length - 1;
+        this.selectedObject = null;
+        this.updateObjectsList();
+        this.updateFramesTimeline();
+        this.updateFrameDisplay();
+        this.updateTabletLayersList();
+        this.redrawCanvas();
+    }
+    
+    removeFrame() {
+        if (this.frames.length <= 1) return;
+        this.frames.splice(this.currentFrame, 1);
+        if (this.currentFrame >= this.frames.length) {
+            this.currentFrame = this.frames.length - 1;
+        }
+        this.selectedObject = null;
+        this.updateObjectsList();
+        this.updateFramesTimeline();
+        this.updateFrameDisplay();
+        this.updateTabletLayersList();
+        this.redrawCanvas();
+    }
+    
+    loadFrame(frameIndex) {
+        if (frameIndex >= 0 && frameIndex < this.frames.length) {
+            this.currentFrame = frameIndex;
+            this.selectedObject = null;
+            this.updateObjectsList();
+            this.updateFramesTimeline();
+            this.updateFrameDisplay();
+            this.updateTabletLayersList();
+            this.redrawCanvas();
+        }
+    }
+    
+    // Sync tablet controls with desktop
+    updateObjectsList() {
+        const layersList = document.getElementById('layersList');
+        layersList.innerHTML = '';
+        const objects = this.frames[this.currentFrame].objects;
+
+        // Show/hide folder creation button based on selection
+        const folderBtn = document.getElementById('createFolderBtn');
+        if (folderBtn) {
+            if (this.selectedObjects.length >= 2) {
+                folderBtn.style.display = 'block';
+                folderBtn.onclick = () => this.createGroup();
+            } else {
+                folderBtn.style.display = 'none';
+            }
+        }
+
+        objects.forEach((obj, i) => {
+            this.renderLayerItem(obj, layersList, 0);
+        });
+        
+        // Update tablet layers list if in tablet mode
+        if (this.deviceType === 'tablet') {
+            this.updateTabletLayersList();
         }
     }
     
