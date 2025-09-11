@@ -4339,30 +4339,190 @@ class AnimationMaker {
     setupTabletSupport() {
         this.resetZoomToFit();
         
+        // Enhanced touch/pen support for canvas
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                this.handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+                this.handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY, button: 0, pressure: touch.force || 1 });
             }
         }, { passive: false });
         
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            if (e.touches.length === 1 && this.isDrawing) {
+            if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                this.handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+                this.handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY, pressure: touch.force || 1 });
             }
         }, { passive: false });
         
         this.canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            if (e.touches.length === 0) {
-                this.handleMouseUp({ clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY });
+            if (e.touches.length === 0 && e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                this.handleMouseUp({ clientX: touch.clientX, clientY: touch.clientY, button: 0 });
             }
         }, { passive: false });
         
+        // Pointer events for stylus/pen support
+        this.canvas.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'pen') {
+                e.preventDefault();
+                this.handleMouseDown({ clientX: e.clientX, clientY: e.clientY, button: 0, pressure: e.pressure });
+            }
+        });
+        
+        this.canvas.addEventListener('pointermove', (e) => {
+            if (e.pointerType === 'pen') {
+                e.preventDefault();
+                this.handleMouseMove({ clientX: e.clientX, clientY: e.clientY, pressure: e.pressure });
+            }
+        });
+        
+        this.canvas.addEventListener('pointerup', (e) => {
+            if (e.pointerType === 'pen') {
+                e.preventDefault();
+                this.handleMouseUp({ clientX: e.clientX, clientY: e.clientY, button: 0 });
+            }
+        });
+        
+        // Touch-friendly toolbar
+        this.setupTouchToolbar();
+        
+        // Initialize tablet bottom tabs
+        this.initTabletBottomTabs();
+        
         document.documentElement.style.setProperty('--touch-size', '48px');
+    }
+    
+    initTabletBottomTabs() {
+        if (this.deviceType !== 'tablet') return;
+        
+        // Show tablet tabs
+        document.getElementById('tabletBottomTabs').style.display = 'block';
+        
+        // Setup tab switching
+        document.querySelectorAll('.bottom-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = btn.dataset.tab;
+                
+                // Update tab buttons
+                document.querySelectorAll('.bottom-tab-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.color = 'rgba(255,255,255,0.7)';
+                    b.style.borderBottomColor = 'transparent';
+                });
+                
+                btn.classList.add('active');
+                btn.style.color = 'white';
+                btn.style.borderBottomColor = '#ffd700';
+                
+                // Update tab content
+                document.querySelectorAll('.bottom-tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                document.getElementById(`bottom-${tabName}-tab`).style.display = 'block';
+                
+                // Populate content
+                if (tabName === 'drawing') this.populateBottomDrawingTools();
+            });
+        });
+        
+        // Connect buttons
+        document.getElementById('bottomAddFrameBtn').addEventListener('click', () => this.addFrame());
+        document.getElementById('bottomCopyFrameBtn').addEventListener('click', () => this.copyFrame());
+        
+        this.populateBottomDrawingTools();
+    }
+    
+    populateBottomDrawingTools() {
+        const toolGrid = document.getElementById('bottomToolGrid');
+        if (!toolGrid) return;
+        
+        const tools = [
+            { tool: 'move', icon: 'fas fa-arrows-alt', name: 'Move' },
+            { tool: 'pencil', icon: 'fas fa-pencil-alt', name: 'Pencil' },
+            { tool: 'line', icon: 'fas fa-minus', name: 'Line' },
+            { tool: 'circle', icon: 'fas fa-circle', name: 'Circle' },
+            { tool: 'square', icon: 'fas fa-square', name: 'Square' },
+            { tool: 'triangle', icon: 'fas fa-play', name: 'Triangle' },
+            { tool: 'text', icon: 'fas fa-font', name: 'Text' },
+            { tool: 'eraser', icon: 'fas fa-eraser', name: 'Eraser' }
+        ];
+        
+        toolGrid.innerHTML = tools.map(t => `
+            <button class="bottom-tool-btn" data-tool="${t.tool}" style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <i class="${t.icon}" style="font-size: 18px;"></i>
+                <span style="font-size: 10px;">${t.name}</span>
+            </button>
+        `).join('');
+        
+        // Add tool handlers
+        document.querySelectorAll('.bottom-tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setTool(btn.dataset.tool);
+                document.querySelectorAll('.bottom-tool-btn').forEach(b => {
+                    b.style.background = 'rgba(255,255,255,0.1)';
+                });
+                btn.style.background = 'rgba(255,215,0,0.2)';
+            });
+        });
+        
+        // Connect controls
+        const colorInput = document.getElementById('bottomPrimaryColor');
+        const sizeInput = document.getElementById('bottomBrushSize');
+        const sizeValue = document.getElementById('bottomBrushSizeValue');
+        
+        if (colorInput) {
+            colorInput.addEventListener('change', (e) => {
+                this.primaryColor = e.target.value;
+                document.getElementById('primaryColor').value = e.target.value;
+            });
+        }
+        
+        if (sizeInput) {
+            sizeInput.addEventListener('input', (e) => {
+                this.brushSize = parseInt(e.target.value);
+                document.getElementById('brushSize').value = e.target.value;
+                document.getElementById('brushSizeValue').textContent = e.target.value;
+                if (sizeValue) sizeValue.textContent = e.target.value;
+            });
+        }
+    }
+    
+    setupTouchToolbar() {
+        // Make all toolbar buttons touch-friendly
+        document.querySelectorAll('.tool-btn, .action-btn, .menu-btn').forEach(btn => {
+            btn.style.minHeight = '48px';
+            btn.style.minWidth = '48px';
+            btn.style.padding = '12px';
+            
+            // Add touch feedback
+            btn.addEventListener('touchstart', (e) => {
+                btn.style.transform = 'scale(0.95)';
+                btn.style.opacity = '0.8';
+            }, { passive: true });
+            
+            btn.addEventListener('touchend', (e) => {
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                    btn.style.opacity = '1';
+                }, 100);
+            }, { passive: true });
+        });
+        
+        // Enhanced color picker touch support
+        document.querySelectorAll('input[type="color"]').forEach(colorInput => {
+            colorInput.style.minHeight = '44px';
+            colorInput.style.minWidth = '44px';
+        });
+        
+        // Enhanced slider touch support
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.style.height = '44px';
+            slider.style.cursor = 'pointer';
+        });
     }
     
     applyDisplayMode(mode) {
