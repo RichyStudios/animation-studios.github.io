@@ -3,12 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animate Studio - Animation Maker Free</title>
+    <title>Animate Studio - Professional Animation Maker</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="layers-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
+        /* Responsive Design & Touch Support */
+        @media (max-width: 1200px) {
+            .main-container { flex-direction: column; }
+            .sidebar { width: 100% !important; max-width: none !important; }
+            .animation-timeline-bar { left: 0 !important; right: 0 !important; }
+        }
+
+        @media (max-width: 768px) {
+            .top-menu { flex-wrap: wrap; padding: 10px; }
+            .menu-sections { flex-wrap: wrap; }
+            .tool-grid { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
+            .canvas-container { margin-top: -60px !important; }
+            .sidebar { padding: 10px !important; }
+        }
+
+        /* Prevent text selection on double-click */
+        .frames-timeline, .frames-timeline * {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* Touch Support */
+        @media (hover: none) and (pointer: coarse) {
+            .tool-btn, .action-btn, .playback-btn { min-height: 44px; min-width: 44px; }
+            .frames-timeline .frame-item { min-height: 60px; min-width: 80px; }
+            [data-tooltip]:hover::after { display: none; }
+        }
+
+        /* Auto-fit canvas */
+        .canvas-container {
+            width: 100%;
+            max-width: calc(100vw - 650px);
+            min-width: 400px;
+        }
+
+        @media (max-width: 1200px) {
+            .canvas-container { max-width: 100%; }
+        }
+
+        /* Loading Screen Styles */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #3c5ef4 0%, #0099ff 50%, #00ddff 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        #loadingScreen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-logo {
+            font-size: 4em;
+            color: white;
+            margin-bottom: 30px;
+            animation: logoFloat 3s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(255,255,255,0.5);
+        }
+
+        .loading-text {
+            font-size: 1.8em;
+            color: white;
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            animation: textGlow 2s ease-in-out infinite alternate;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+
+        .loading-progress {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #fff, #f093fb, #fff);
+            border-radius: 3px;
+            width: 0%;
+            animation: progressGlow 2s ease-in-out infinite;
+            transition: width 0.3s ease;
+        }
+
+        .loading-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            animation: particleFloat 4s linear infinite;
+            opacity: 0.7;
+        }
+
+        .loading-status {
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+            margin-top: 10px;
+            min-height: 20px;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        .loading-screen-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #667eea);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        .loading-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-orb {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: orbFloat 6s ease-in-out infinite;
+            top: 20%;
+            left: 10%;
+        }
+
+        .loading-orb:nth-child(2) {
+            width: 150px;
+            height: 150px;
+            top: 60%;
+            right: 15%;
+            left: auto;
+            animation-delay: -2s;
+            animation-duration: 8s;
+        }
+
+        .loading-orb:nth-child(3) {
+            width: 100px;
+            height: 100px;
+            top: 30%;
+            right: 30%;
+            left: auto;
+            animation-delay: -4s;
+            animation-duration: 10s;
+        }
+
+        @keyframes soundPop {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2) rotate(180deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes burstOut {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) translate(var(--x-offset, 100px), var(--y-offset, 100px)) scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes sparkleFloat {
+            0% {
+                transform: translateY(0px) scale(0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-20px) scale(1.2) rotate(180deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-40px) scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Main container initial state for animation */
+        .main-container {
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .top-menu {
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .animation-timeline-bar {
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            display: flex;
+            gap: 2px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 2px;
+            margin-left: 20px;
+        }
+
+        .theme-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .theme-btn.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* Theme Variables */
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #e9ecef;
+            --accent-color: #4f46e5;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --border-color: #404040;
+            --accent-color: #6366f1;
+        }
+
+        [data-theme="coffee"] {
+            --bg-primary: #2d1b14;
+            --bg-secondary: #3d2b1f;
+            --text-primary: #f4e4bc;
+            --text-secondary: #d4c4a8;
+            --border-color: #5d4037;
+            --accent-color: #8d6e63;
+        }
+
+        [data-theme="book"] {
+            --bg-primary: #f7f3e9;
+            --bg-secondary: #ede7d3;
+            --text-primary: #3e2723;
+            --text-secondary: #5d4037;
+            --border-color: #d7cc9a;
+            --accent-color: #6d4c41;
+        }
+
+        /* Apply theme colors */
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar, .animation-timeline-bar {
+            background: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        .tool-section h4, .section-header h4 {
+            color: var(--text-primary);
+        }
+
+        .tool-btn, .action-btn, .tab-btn {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .tool-btn.active, .tab-btn.active {
+            background: var(--accent-color) !important;
+            color: white !important;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+
+        @keyframes textGlow {
+            0% { text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+            100% { text-shadow: 0 0 30px rgba(255,255,255,0.8), 0 0 40px rgba(240,147,251,0.6); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes progressGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            50% { box-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(240,147,251,0.6); }
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translateY(100vh) translateX(0px);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-10px) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes orbFloat {
+            0%, 100% {
+                transform: translateY(0px) translateX(0px) scale(1);
+                opacity: 0.3;
+            }
+            33% {
+                transform: translateY(-30px) translateX(20px) scale(1.1);
+                opacity: 0.5;
+            }
+            66% {
+                transform: translateY(20px) translateX(-15px) scale(0.9);
+                opacity: 0.4;
+            }
+        }
+
         /* Force tooltips to front */
         [data-tooltip] {
             position: relative;
@@ -45,7 +446,7 @@
             position: relative;
             z-index: 10000;
         }
-        
+
         /* Top menu tooltips appear below */
         .top-menu [data-tooltip]:hover::after {
             bottom: auto;
@@ -63,37 +464,7 @@
             z-index: 10000 !important;
             position: fixed;
         }
-        /* Canvas container fit */
-        .canvas-container {
-            flex: 1;
-            overflow: auto;
-            position: relative;
-            background: #f8f9fa;
-            width: 100%;
-            height: 100%;
-        }
-        .canvas-scroll-area {
-            position: relative;
-            width: 6000px;
-            height: 4000px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .canvas-container-inner {
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            transform-origin: center center;
-        }
-        /* Canvas scaling and quality */
-        #mainCanvas, #overlayCanvas {
-            image-rendering: auto;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: optimize-contrast;
-            display: block;
-        }
-        /* Layer folder styles */
+
         .expand-btn {
             background: none;
             border: none;
@@ -109,11 +480,35 @@
     </style>
 </head>
 <body>
+    <!-- Visual Effects -->
+    <div class="particles" id="particles"></div>
+    <div class="scan-lines"></div>
+    <div class="matrix-rain" id="matrixRain"></div>
+    
+    <!-- Energy Orbs -->
+    <div class="energy-orb" style="top: 10%; left: 5%; animation-delay: 0s;"></div>
+    <div class="energy-orb" style="top: 70%; right: 10%; animation-delay: 2s;"></div>
+    <div class="energy-orb" style="top: 40%; left: 80%; animation-delay: 4s;"></div>
+
     <!-- Top Menu Bar -->
     <div class="top-menu">
         <div class="menu-brand">
-        <i class="fas fa-video"></i>
+            <i class="fas fa-video"></i>
             <span>Animate Studio</span>
+        </div>
+        <div class="theme-selector">
+            <button class="theme-btn active" data-theme="light" data-tooltip="Light Theme" title="Light Theme" aria-label="Light Theme">
+                <i class="fas fa-sun"></i>
+            </button>
+            <button class="theme-btn" data-theme="dark" data-tooltip="Dark Theme" title="Dark Theme" aria-label="Dark Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="theme-btn" data-theme="coffee" data-tooltip="Coffee Theme" title="Coffee Theme" aria-label="Coffee Theme">
+                <i class="fas fa-coffee"></i>
+            </button>
+            <button class="theme-btn" data-theme="book" data-tooltip="Book Theme" title="Book Theme" aria-label="Book Theme">
+                <i class="fas fa-book"></i>
+            </button>
         </div>
         <div class="menu-sections">
             <div class="menu-group">
@@ -135,16 +530,16 @@
                 </button>
             </div>
             <div class="menu-group">
-                <button class="menu-btn" id="undoBtn" data-tooltip="Undo last action (Ctrl+Z)">
+                <button class="menu-btn" id="undoBtn" data-tooltip="Undo last action (Ctrl+Z)" aria-label="Undo last action">
                     <i class="fas fa-undo-alt"></i>
                 </button>
-                <button class="menu-btn" id="redoBtn" data-tooltip="Redo last undone action (Ctrl+Y)">
+                <button class="menu-btn" id="redoBtn" data-tooltip="Redo last undone action (Ctrl+Y)" aria-label="Redo last undone action">
                     <i class="fas fa-redo-alt"></i>
                 </button>
-                <button class="menu-btn" id="copyBtn" data-tooltip="Copy selected object (Ctrl+C)">
+                <button class="menu-btn" id="copyBtn" data-tooltip="Copy selected object (Ctrl+C)" aria-label="Copy selected object">
                     <i class="fas fa-copy"></i>
                 </button>
-                <button class="menu-btn" id="pasteBtn" data-tooltip="Paste copied object (Ctrl+V)">
+                <button class="menu-btn" id="pasteBtn" data-tooltip="Paste copied object (Ctrl+V)" aria-label="Paste copied object">
                     <i class="fas fa-paste"></i>
                 </button>
             </div>
@@ -164,13 +559,13 @@
                 <i class="fas fa-coffee"></i>
                 <span>Support</span>
             </button>
-            <button class="menu-btn icon-only" id="aboutBtn" data-tooltip="About Animate Studio - Version and credits">
+            <button class="menu-btn icon-only" id="aboutBtn" data-tooltip="About Animate Studio - Version and credits" aria-label="About Animate Studio - Version and credits">
                 <i class="fas fa-info-circle"></i>
             </button>
         </div>
     </div>
 
-    <!-- Main Container -->
+  <!-- Main Container -->
     <div class="main-container">
         <!-- Left Toolbar -->
         <div class="sidebar left-sidebar" style="width: fit-content; min-width: 250px; max-width: 300px;">
@@ -182,6 +577,10 @@
             <div class="tool-section">
                 <h4>Drawing Tools</h4>
                 <div class="tool-grid">
+                    <button class="tool-btn" data-tool="pan" data-tooltip="Pan canvas - drag to move view around">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Pan</span>
+                    </button>
                     <button class="tool-btn active" data-tool="move" data-tooltip="Select, move, rotate and resize objects">
                         <i class="fas fa-arrows-alt"></i>
                         <span>Move</span>
@@ -225,6 +624,14 @@
                     <button class="tool-btn" data-tool="eraser" data-tooltip="Erase parts of drawings - drag to erase">
                         <i class="fas fa-eraser"></i>
                         <span>Eraser</span>
+                    </button>
+                    <button class="tool-btn" data-tool="bone" data-tooltip="Create bones for character rigging and animation">
+                        <i class="fas fa-bone"></i>
+                        <span>Bone</span>
+                    </button>
+                    <button class="tool-btn" data-tool="flood-fill" data-tooltip="Fill enclosed areas with color - click to fill">
+                        <i class="fas fa-fill-drip"></i>
+                        <span>Fill</span>
                     </button>
 
 
@@ -304,7 +711,7 @@
         </div>
 
         <!-- Canvas Area -->
-        <div class="canvas-container">
+        <div class="canvas-container" style="margin-bottom: 120px; margin-top: -120px;">
             <div class="canvas-scroll-area">
                 <div class="canvas-container-inner" style="background: #f0f0f0; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                     <canvas id="mainCanvas" width="1920" height="1080" style="display: block; background: white;"></canvas>
@@ -320,9 +727,9 @@
                     <i class="fas fa-layer-group"></i>
                     <span>Layers</span>
                 </button>
-                <button class="tab-btn" data-tab="frames">
-                    <i class="fas fa-film"></i>
-                    <span>Frames</span>
+                <button class="tab-btn" data-tab="canvas">
+                    <i class="fas fa-cog"></i>
+                    <span>Canvas</span>
                 </button>
             </div>
 
@@ -356,86 +763,200 @@
                 </div>
             </div>
 
-            <!-- Frames Tab -->
-            <div class="tab-content" id="frames-tab">
-                <div class="section-header">
-                    <h4>Animation</h4>
-                    <div class="header-actions">
-                        <button class="action-btn" id="addFrameBtn" data-tooltip="Add new frame to animation timeline">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="action-btn" id="removeFrameBtn" data-tooltip="Delete current frame from timeline">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button class="action-btn" id="copyFrameBtn" data-tooltip="Duplicate current frame with all objects">
-                            <i class="fas fa-copy"></i>
-                        </button>
+            <!-- Canvas Tab -->
+            <div class="tab-content" id="canvas-tab">
+                <div class="section-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -15px -15px 0; padding: 20px; border-radius: 12px 12px 0 0;">
+                    <h4 style="margin: 0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-cog" style="font-size: 1.2em;"></i> Canvas Studio</h4>
+                </div>
+                
+                <!-- Status Panel -->
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); margin: 0 -15px; padding: 15px; border-bottom: 1px solid #dee2e6;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                            <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Frame</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #495057;"><span id="currentFrameDisplay">1</span>/<span id="totalFramesDisplay">1</span></div>
+                        </div>
+                        <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                            <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Zoom</div>
+                            <div id="zoomDisplay" style="font-size: 18px; font-weight: bold; color: #495057;">100%</div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="canvas-info">
-                    <span>Frame: <span id="currentFrameDisplay">1</span>/<span id="totalFramesDisplay">1</span></span>
-                    <span id="zoomDisplay">Zoom: 100%</span>
-                    <span>|</span>
-                    <label style="display: flex; align-items: center; gap: 5px; font-size: 12px;">
-                        <input type="checkbox" id="backgroundToggle" style="margin: 0;">
-                        <span>BG:</span>
-                        <input type="color" id="backgroundColor" value="#ffffff" style="width: 25px; height: 18px; border: none; cursor: pointer;">
-                        <input type="checkbox" id="allFramesToggle" style="margin: 0 0 0 8px;">
-                        <span>All</span>
-                    </label>
-                </div>
-                
-                <div class="canvas-actions">
-                    <button class="action-btn" id="zoomInBtn" data-tooltip="Zoom in to see more detail">
-                        <i class="fas fa-search-plus"></i>
-                    </button>
-                    <button class="action-btn" id="zoomOutBtn" data-tooltip="Zoom out to see more of canvas">
-                        <i class="fas fa-search-minus"></i>
-                    </button>
-                    <button class="action-btn" id="zoomResetBtn" data-tooltip="Reset zoom to 100% normal view">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </button>
-                    <button class="action-btn" id="fitScreenBtn" data-tooltip="Fit canvas to screen - scale to fit container">
-                        <i class="fas fa-compress-arrows-alt"></i>
-                    </button>
-                    <label class="onion-skin-label action-btn" data-tooltip="Show previous/next frames as ghosts for animation reference">
-                        <input type="checkbox" id="onionSkinToggle" checked>
-                        <i class="fas fa-eye"></i>
-                    </label>
-                </div>
-                
-                <div class="frames-timeline" id="framesTimeline">
-                    <!-- Frame thumbnails will be populated by JavaScript -->
+                <div style="padding: 20px;">
+                    <!-- Background Section -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+                        <h5 style="margin: 0 0 15px; color: #495057; display: flex; align-items: center; gap: 8px;"><i class="fas fa-palette" style="color: #28a745;"></i> Background</h5>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="backgroundToggle" style="margin: 0; transform: scale(1.2);">
+                                <span style="font-weight: 500;">Enable</span>
+                            </label>
+                            <div style="position: relative;">
+                                <input type="color" id="backgroundColor" value="#ffffff" style="width: 40px; height: 30px; border: 2px solid #dee2e6; cursor: pointer; border-radius: 6px; background: none;">
+                                <div style="position: absolute; top: -8px; right: -8px; background: #28a745; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px;"><i class="fas fa-palette"></i></div>
+                            </div>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6c757d; margin-left: 20px; cursor: pointer;">
+                            <input type="checkbox" id="allFramesToggle" style="margin: 0;">
+                            <span>Apply to all frames</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Zoom Controls -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+                        <h5 style="margin: 0 0 15px; color: #495057; display: flex; align-items: center; gap: 8px;"><i class="fas fa-search-plus" style="color: #007bff;"></i> Zoom Controls</h5>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button class="action-btn" id="zoomInBtn" data-tooltip="Zoom in" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500;">
+                                <i class="fas fa-search-plus"></i> In
+                            </button>
+                            <button class="action-btn" id="zoomOutBtn" data-tooltip="Zoom out" style="background: linear-gradient(135deg, #6c757d, #495057); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500;">
+                                <i class="fas fa-search-minus"></i> Out
+                            </button>
+                            <button class="action-btn" id="zoomResetBtn" data-tooltip="Reset zoom" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500;">
+                                <i class="fas fa-expand-arrows-alt"></i> Reset
+                            </button>
+                            <button class="action-btn" id="fitScreenBtn" data-tooltip="Fit to screen" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500;">
+                                <i class="fas fa-compress-arrows-alt"></i> Fit
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Onion Skin -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                            <div style="position: relative;">
+                                <input type="checkbox" id="onionSkinToggle" checked style="margin: 0; transform: scale(1.3);">
+                                <div style="position: absolute; top: -10px; right: -10px; background: #17a2b8; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px;"><i class="fas fa-eye"></i></div>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #495057; margin-bottom: 2px;">Onion Skin</div>
+                                <div style="font-size: 12px; color: #6c757d;">Show previous/next frames as ghosts</div>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- Canvas Size -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+                        <h5 style="margin: 0 0 15px; color: #495057; display: flex; align-items: center; gap: 8px;"><i class="fas fa-expand" style="color: #6f42c1;"></i> Canvas Size</h5>
+                        <select id="canvasSizeSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; background: #f8f9fa; font-weight: 500; cursor: pointer; transition: all 0.3s;">
+                            <option value="1920x1080" selected>🎬 1920×1080 (Full HD)</option>
+                            <option value="1280x720">📺 1280×720 (HD Ready)</option>
+                            <option value="800x600">💻 800×600 (Classic)</option>
+                            <option value="640x480">📱 640×480 (VGA)</option>
+                            <option value="320x240">🎮 320×240 (Pixel Art)</option>
+                            <option value="custom">⚙️ Custom Size</option>
+                        </select>
+                        
+                        <div id="customSizeInputs" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 4px; display: block;">Width (px)</label>
+                                    <input type="number" id="customWidth" value="1920" min="100" max="4000" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px; background: white;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 4px; display: block;">Height (px)</label>
+                                    <input type="number" id="customHeight" value="1080" min="100" max="4000" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px; background: white;">
+                                </div>
+                            </div>
+                            <button id="applyCanvasSize" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #6f42c1, #5a2d91); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s;">✨ Apply Custom Size</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Drawing Mode -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
+                        <h5 style="margin: 0 0 15px; color: #495057; display: flex; align-items: center; gap: 8px;"><i class="fas fa-brush" style="color: #e83e8c;"></i> Drawing Mode</h5>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button id="originalModeBtn" class="mode-btn active" data-mode="original" style="padding: 16px; border: 2px solid #28a745; background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s; text-align: center; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                                <i class="fas fa-paint-brush" style="font-size: 1.5em; margin-bottom: 8px; display: block;"></i>
+                                <div>Original</div>
+                                <div style="font-size: 11px; opacity: 0.9; margin-top: 4px;">Smooth & Clean</div>
+                            </button>
+                            <button id="pixelModeBtn" class="mode-btn" data-mode="pixel" style="padding: 16px; border: 2px solid #6f42c1; background: white; color: #6f42c1; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s; text-align: center;">
+                                <i class="fas fa-th" style="font-size: 1.5em; margin-bottom: 8px; display: block;"></i>
+                                <div>Pixel Art</div>
+                                <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">Retro & Sharp</div>
+                            </button>
+                        </div>
+                        
+                        <!-- Pixel Level Settings -->
+                        <div id="pixelLevelSettings" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #6f42c1;">
+                            <h6 style="margin: 0 0 12px; color: #6f42c1; display: flex; align-items: center; gap: 6px;"><i class="fas fa-sliders-h"></i> Pixel Level</h6>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
+                                <button class="pixel-level-btn active" data-level="2" style="padding: 8px; border: 2px solid #6f42c1; background: #6f42c1; color: white; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">2px</button>
+                                <button class="pixel-level-btn" data-level="4" style="padding: 8px; border: 2px solid #6f42c1; background: white; color: #6f42c1; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">4px</button>
+                                <button class="pixel-level-btn" data-level="8" style="padding: 8px; border: 2px solid #6f42c1; background: white; color: #6f42c1; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">8px</button>
+                                <button class="pixel-level-btn" data-level="16" style="padding: 8px; border: 2px solid #6f42c1; background: white; color: #6f42c1; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">16px</button>
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; text-align: center;">Choose pixel size for grid snapping</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Playback Bar -->
-    <div class="playback-bar">
-        <div class="playback-controls">
-            <button class="playback-btn" id="prevFrameBtn" data-tooltip="Go to previous frame in timeline">
-                <i class="fas fa-step-backward"></i>
-            </button>
-            <button class="playback-btn play-btn" id="playBtn" data-tooltip="Play animation or pause if playing">
-                <i class="fas fa-play"></i>
-            </button>
-            <button class="playback-btn" id="nextFrameBtn" data-tooltip="Go to next frame in timeline">
-                <i class="fas fa-step-forward"></i>
-            </button>
-            <button class="playback-btn" id="stopBtn" data-tooltip="Stop animation and return to first frame">
-                <i class="fas fa-stop"></i>
-            </button>
+    <!-- Professional Animation Timeline -->
+    <div class="animation-timeline-bar" style="position: fixed; bottom: 0; left: 280px; right: 350px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-top: 2px solid #6f42c1; padding: 10px; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); border-radius: 8px 8px 0 0;">
+        <!-- Timeline Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <h4 style="margin: 0; color: #495057; display: flex; align-items: center; gap: 6px; font-size: 14px;"><i class="fas fa-film" style="color: #6f42c1; font-size: 14px;"></i> Timeline</h4>
+                <div style="background: linear-gradient(135deg, #6f42c1, #764ba2); padding: 4px 8px; border-radius: 12px; font-size: 11px; color: white; font-weight: 600;">
+                    <span>Frame: <span id="currentFrameDisplay">1</span>/<span id="totalFramesDisplay">1</span></span>
+                </div>
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 10px; background: white; padding: 3px 6px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <input type="checkbox" id="onionSkinToggle" checked style="margin: 0; transform: scale(0.7);">
+                    <i class="fas fa-layer-group" style="color: #6f42c1; font-size: 9px;"></i>
+                    <span>Onion</span>
+                </label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="display: flex; gap: 2px;">
+                    <button id="addFrameBtn" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Add Frame">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button id="copyFrameBtn" style="background: #17a2b8; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Duplicate Frame">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button id="removeFrameBtn" style="background: #dc3545; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Remove Frame">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div style="width: 1px; height: 16px; background: #ddd; margin: 0 3px;"></div>
+                <div style="display: flex; gap: 2px;">
+                    <button id="prevFrameBtn" style="background: #6c757d; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Previous Frame">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button id="playBtn" style="background: #007bff; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Play/Pause">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="stopBtn" style="background: #6c757d; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Stop">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button id="nextFrameBtn" style="background: #6c757d; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Next Frame">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                </div>
+                <div style="width: 1px; height: 16px; background: #ddd; margin: 0 3px;"></div>
+                <div style="display: flex; align-items: center; gap: 4px; background: white; padding: 3px 6px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <span style="font-size: 9px; color: #6c757d;">Speed:</span>
+                </div>
+                <div style="width: 1px; height: 16px; background: #ddd; margin: 0 3px;"></div>
+                <div style="display: flex; align-items: center; gap: 4px; background: white; padding: 3px 6px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <span style="font-size: 9px; color: #6c757d;">Speed:</span>
+                    <label for="headerPlaybackSpeed" class="visually-hidden">Animation Playback Speed</label>
+                    <input type="range" id="headerPlaybackSpeed" class="playback-speed-slider" min="1" max="60" value="12" title="Adjust animation playback speed" aria-label="Animation playback speed control">
+                    <span id="speedValue" style="font-size: 9px; color: #495057; font-weight: 600; min-width: 15px;">12</span>
+                    <span style="font-size: 8px; color: #6c757d;">FPS</span>
+                </div>
+            </div>
         </div>
         
-        <div class="playback-info">
-            <span>FPS: <span id="fpsDisplay">12</span></span>
-        </div>
-        
-        <div class="playback-settings">
-            <label>Speed:</label>
-            <input type="range" id="playbackSpeed" min="1" max="60" value="12" class="modern-slider">
+        <!-- Frames Timeline -->
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-radius: 6px; padding: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e9ecef;">
+            <div id="framesTimeline" style="display: flex; gap: 6px; overflow-x: auto; padding: 2px; min-height: 50px; align-items: center;">
+                <!-- Frame thumbnails will be populated by JavaScript -->
+            </div>
         </div>
     </div>
 
@@ -449,11 +970,14 @@
             <div class="modal-body">
                 <div class="about-content">
                     <div class="version-info">
-                        <span class="version-badge">v1.0.0</span>
+                        <span class="version-badge">v1.05</span>
                         <span class="status-badge">Free</span>
                     </div>
                     <p class="description">
-                        For test only, thank you!
+                        Professional animation studio with advanced features, effects, and unified frame-style GUI.
+                    </p>
+                    <p class="description">
+                        <strong>v1.05 Updates:</strong> Fixed zoom functionality, unified toolbar styling, improved canvas positioning, enhanced frame drag-and-drop, optimized drawing tools performance.
                     </p>
                     <p class="description">
                         Coded by Richard Noble
@@ -605,7 +1129,7 @@
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Animation Speed: <span id="fireSpeedValue">50</span>%</strong></label>
-                    <input type="range" id="fireSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                    <input type="range" id="fireSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;" aria-label="Fire animation speed">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 5px;">
                         <span>Slow</span>
                         <span>Fast</span>
@@ -661,12 +1185,12 @@
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Speed: <span id="rainSpeedValue">50</span>%</strong></label>
-                    <input type="range" id="rainSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                    <input type="range" id="rainSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;" aria-label="Rain speed">
                 </div>
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Rain Size: <span id="rainSizeValue">Medium</span></strong></label>
-                    <select id="rainSize" style="width: 100%; padding: 8px; margin-top: 8px;">
+                    <select id="rainSize" style="width: 100%; padding: 8px; margin-top: 8px;" aria-label="Rain drop size">
                         <option value="small">Small Drops</option>
                         <option value="medium" selected>Medium Drops</option>
                         <option value="large">Large Drops</option>
@@ -693,7 +1217,7 @@
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Rain Color</strong></label>
-                    <input type="color" id="rainColor" value="#3b82f6" style="width: 100%; height: 40px; margin-top: 8px;">
+                    <input type="color" id="rainColor" value="#3b82f6" style="width: 100%; height: 40px; margin-top: 8px;" aria-label="Rain color">
                 </div>
                 
                 <div style="margin-bottom: 25px;">
@@ -727,12 +1251,12 @@
             <div class="modal-body">
                 <div style="margin-bottom: 20px;">
                     <label><strong>Speed: <span id="snowSpeedValue">50</span>%</strong></label>
-                    <input type="range" id="snowSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;">
+                    <input type="range" id="snowSpeed" min="10" max="100" value="50" style="width: 100%; margin-top: 8px;" aria-label="Snow speed">
                 </div>
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Snow Size: <span id="snowSizeValue">Medium</span></strong></label>
-                    <select id="snowSize" style="width: 100%; padding: 8px; margin-top: 8px;">
+                    <select id="snowSize" style="width: 100%; padding: 8px; margin-top: 8px;" aria-label="Snow flake size">
                         <option value="small">Small Flakes</option>
                         <option value="medium" selected>Medium Flakes</option>
                         <option value="large">Large Flakes</option>
@@ -759,7 +1283,7 @@
                 
                 <div style="margin-bottom: 20px;">
                     <label><strong>Snow Color</strong></label>
-                    <input type="color" id="snowColor" value="#ffffff" style="width: 100%; height: 40px; margin-top: 8px;">
+                    <input type="color" id="snowColor" value="#ffffff" style="width: 100%; height: 40px; margin-top: 8px;" aria-label="Snow color">
                 </div>
                 
                 <div style="margin-bottom: 25px;">
@@ -788,50 +1312,14 @@
 
     <script src="script_new.js"></script>
 </body>
-</html>ption>
+</html>
                     </select>
                 </div>
             </div>
         </div>
 
         <!-- Canvas Container -->
-        <div class="canvas-container">
-            <div class="canvas-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; position: relative; z-index: 100;">
-                <div class="canvas-info" style="display: flex; align-items: center; gap: 15px; font-size: 14px;">
-                    <span>Canvas: 800x600px</span>
-                    <span>|</span>
-                    <span id="zoomDisplay">Zoom: 100%</span>
-                    <span>|</span>
-                    <label style="display: flex; align-items: center; gap: 5px;">
-                        <input type="checkbox" id="backgroundToggle" style="margin: 0;">
-                        <span>Background:</span>
-                        <input type="color" id="backgroundColor" value="#ffffff" style="width: 30px; height: 20px; border: none; cursor: pointer;">
-                        <input type="checkbox" id="allFramesToggle" style="margin: 0 0 0 10px;">
-                        <span>All Frames</span>
-                    </label>
-                </div>
-                <div class="canvas-actions">
-                    <button class="action-btn" id="zoomInBtn" data-tooltip="Zoom In">
-                        <i class="fas fa-search-plus"></i>
-                    </button>
-                    <button class="action-btn" id="zoomOutBtn" data-tooltip="Zoom Out">
-                        <i class="fas fa-search-minus"></i>
-                    </button>
-                    <button class="action-btn" id="zoomResetBtn" data-tooltip="Fit to Screen">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </button>
-                    <button class="action-btn" id="onionSkinToggle" data-tooltip="Toggle Onion Skin">
-                        <i class="fas fa-layer-group"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="canvas-wrapper" style="position:relative; width:800px; height:600px;">
-                <div class="canvas-container-inner" style="position:relative; width:800px; height:600px;">
-                    <canvas id="mainCanvas" width="800" height="600" style="position:absolute; left:0; top:0; z-index:1; background:transparent;"></canvas>
-                    <canvas id="overlayCanvas" width="800" height="600" style="position:absolute; left:0; top:0; z-index:2; pointer-events:none;"></canvas>
-                </div>
-            </div>
-        </div>
+     
 
         <!-- Right Sidebar - Layers & Animation -->
         <div class="sidebar right-sidebar">
@@ -851,22 +1339,22 @@
                 <div class="section-header">
                     <h4>Layers</h4>
                     <div class="header-actions">
-                        <button class="action-btn" id="addLayerBtn" data-tooltip="Add Layer">
+                        <button class="action-btn" id="addLayerBtn" data-tooltip="Add Layer" aria-label="Add layer">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button class="action-btn" id="moveToFrontBtn" data-tooltip="Move to Front">
+                        <button class="action-btn" id="moveToFrontBtn" data-tooltip="Move to Front" aria-label="Move to front">
                             <i class="fas fa-angle-double-up"></i>
                         </button>
-                        <button class="action-btn" id="moveUpBtn" data-tooltip="Move Up">
+                        <button class="action-btn" id="moveUpBtn" data-tooltip="Move Up" aria-label="Move up">
                             <i class="fas fa-angle-up"></i>
                         </button>
-                        <button class="action-btn" id="moveDownBtn" data-tooltip="Move Down">
+                        <button class="action-btn" id="moveDownBtn" data-tooltip="Move Down" aria-label="Move down">
                             <i class="fas fa-angle-down"></i>
                         </button>
-                        <button class="action-btn" id="moveToBackBtn" data-tooltip="Move to Back">
+                        <button class="action-btn" id="moveToBackBtn" data-tooltip="Move to Back" aria-label="Move to back">
                             <i class="fas fa-angle-double-down"></i>
                         </button>
-                        <button class="action-btn" id="removeLayerBtn" data-tooltip="Remove Layer">
+                        <button class="action-btn" id="removeLayerBtn" data-tooltip="Remove Layer" aria-label="Remove layer">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -901,27 +1389,27 @@
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div class="frame-actions" style="display: flex; gap: 5px;">
-                    <button class="action-btn" id="addFrameBtn" data-tooltip="Add Frame" style="background: #28a745; color: white;">
+                    <button class="action-btn" id="addFrameBtn" data-tooltip="Add Frame" style="background: #28a745; color: white;" aria-label="Add frame">
                         <i class="fas fa-plus"></i>
                     </button>
-                    <button class="action-btn" id="copyFrameBtn" data-tooltip="Duplicate Frame" style="background: #17a2b8; color: white;">
+                    <button class="action-btn" id="copyFrameBtn" data-tooltip="Duplicate Frame" style="background: #17a2b8; color: white;" aria-label="Copy frame">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="action-btn" id="removeFrameBtn" data-tooltip="Remove Frame" style="background: #dc3545; color: white;">
+                    <button class="action-btn" id="removeFrameBtn" data-tooltip="Remove Frame" style="background: #dc3545; color: white;" aria-label="Remove frame">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
                 <div class="playback-controls" style="display: flex; gap: 5px; margin-left: 15px;">
-                    <button class="playback-btn" id="prevFrameBtn" data-tooltip="Previous Frame">
+                    <button class="playback-btn" id="prevFrameBtn" data-tooltip="Previous Frame" aria-label="Previous frame">
                         <i class="fas fa-step-backward"></i>
                     </button>
-                    <button class="playback-btn play-btn" id="playBtn" data-tooltip="Play Animation">
+                    <button class="playback-btn play-btn" id="playBtn" data-tooltip="Play Animation" aria-label="Play animation">
                         <i class="fas fa-play"></i>
                     </button>
-                    <button class="playback-btn" id="stopBtn" data-tooltip="Stop Animation">
+                    <button class="playback-btn" id="stopBtn" data-tooltip="Stop Animation" aria-label="Stop animation">
                         <i class="fas fa-stop"></i>
                     </button>
-                    <button class="playback-btn" id="nextFrameBtn" data-tooltip="Next Frame">
+                    <button class="playback-btn" id="nextFrameBtn" data-tooltip="Next Frame" aria-label="Next frame">
                         <i class="fas fa-step-forward"></i>
                     </button>
                 </div>
@@ -933,8 +1421,8 @@
         </div>
         
         <!-- Frames Timeline -->
-        <div class="frames-timeline-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e9ecef;">
-            <div class="frames-timeline" id="framesTimeline" style="display: flex; gap: 10px; overflow-x: auto; padding: 5px;">
+        <div class="frames-timeline-container" style="background: rgb(107, 106, 106); border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #717273; overflow-x: auto; overflow-y: hidden;">
+            <div class="frames-timeline" id="framesTimeline" style="display: flex; gap: 10px; min-width: max-content; padding: 5px;">
                 <!-- Frame thumbnails will be populated by JavaScript -->
             </div>
         </div>
@@ -950,7 +1438,7 @@
             <div class="modal-body">
                 <div class="about-content">
                     <div class="version-info">
-                        <span class="version-badge">Version 2.0.0</span>
+                        <span class="version-badge">Version 1.06</span>
                         <span class="status-badge">Professional</span>
                     </div>
                     <p class="description">
@@ -982,6 +1470,18 @@
                             <i class="fas fa-palette"></i>
                             <span>Color Management</span>
                         </div>
+                        <div class="feature-item">
+                            <i class="fas fa-search-plus"></i>
+                            <span>Advanced Zoom</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-mouse-pointer"></i>
+                            <span>Drag & Drop Frames</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-desktop"></i>
+                            <span>Unified GUI Design</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -998,6 +1498,46 @@
         <div class="context-item" id="contextAllFrames" style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="contextAllFramesToggle" style="margin: 0;">
             <span>Apply to All Frames</span>
+        </div>
+    </div>
+
+    <!-- Frame Properties Modal -->
+    <div id="framePropertiesModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 15px; box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);">
+            <div class="modal-header" style="background: transparent; border: none; text-align: center; padding: 25px 25px 15px;">
+                <h2 style="margin: 0; font-size: 1.8em; display: flex; align-items: center; justify-content: center; gap: 10px;"><i class="fas fa-cog" style="color: #fbbf24;"></i> Frame Properties</h2>
+            </div>
+            <div class="modal-body" style="padding: 0 25px 25px;">
+                <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-tag" style="color: #fbbf24; margin-right: 8px;"></i>Frame Name:</label>
+                        <input type="text" id="frameNameInput" placeholder="Enter frame name..." style="width: 100%; padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.9); color: #333; font-size: 14px; box-sizing: border-box;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-tachometer-alt" style="color: #10b981; margin-right: 8px;"></i>Frame Duration: <span id="frameDurationValue" style="color: #fbbf24;">100ms</span></label>
+                        <input type="range" id="frameDurationSlider" min="50" max="2000" value="100" step="50" style="width: 100%; margin-top: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; opacity: 0.8; margin-top: 5px;">
+                            <span>Fast (50ms)</span>
+                            <span>Slow (2000ms)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <input type="checkbox" id="frameVisibleToggle" checked style="margin-right: 10px; transform: scale(1.2);">
+                            <i class="fas fa-eye" style="color: #06b6d4; margin-right: 8px;"></i>
+                            <span style="font-weight: 600;">Visible in Animation</span>
+                        </label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="saveFramePropsBtn" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button id="cancelFramePropsBtn" style="background: rgba(239, 68, 68, 0.8); border: 2px solid rgba(239, 68, 68, 0.5); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1023,18 +1563,17 @@
 
     <script src="script_new.js"></script>
     
-    <!-- Update display values for sliders -->
+    <!-- Initialize animation maker -->
     <script>
-        document.getElementById('brushSize').addEventListener('input', function() {
-            document.getElementById('brushSizeValue').textContent = this.value;
-        });
-        
-        document.getElementById('fontSize').addEventListener('input', function() {
-            document.getElementById('fontSizeValue').textContent = this.value;
-        });
-        
-        document.getElementById('playbackSpeed').addEventListener('input', function() {
-            document.getElementById('speedValue').textContent = this.value;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading screen immediately
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+            
+            // Initialize animation maker
+            window.animationMaker = new AnimationMaker();
         });
     </script>
 </body>

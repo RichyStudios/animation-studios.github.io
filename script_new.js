@@ -66,9 +66,16 @@ class AnimationMaker {
         // Background settings
         this.backgroundEnabled = false;
         this.backgroundColor = '#ffffff';
+        
+        // Canvas and drawing mode settings
+        this.canvasWidth = 1920;
+        this.canvasHeight = 1080;
+        this.drawingMode = 'original'; // 'original' or 'pixel'
+        this.pixelSize = 2; // Size of pixels in pixel art mode (default 2px)
 
         this.initProject();
         this.setupEventListeners();
+        this.setupDeviceSupport();
     }
 
     initProject() {
@@ -87,18 +94,24 @@ class AnimationMaker {
         this.overlayCanvas.width = 1920;
         this.overlayCanvas.height = 1080;
         
-        // Check if first time user
-        if (!localStorage.getItem('animateStudioWelcomed')) {
-            document.getElementById('welcomeModal').style.display = 'block';
-        } else {
-            document.getElementById('welcomeModal').style.display = 'none';
-        }
+        // Check if first time user (delay to show after loading)
+        setTimeout(() => {
+            if (!localStorage.getItem('animateStudioWelcomed')) {
+                document.getElementById('welcomeModal').style.display = 'block';
+            } else {
+                document.getElementById('welcomeModal').style.display = 'none';
+            }
+        }, 1000);
         
         this.updateObjectsList();
         this.updateFramesTimeline();
         this.updateFrameDisplay();
         this.redrawCanvas();
         this.saveState();
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('animateStudioTheme') || 'light';
+        this.switchTheme(savedTheme);
     }
 
     saveState() {
@@ -106,6 +119,8 @@ class AnimationMaker {
         if (this.history.length > 50) {
             this.history.shift();
         }
+        // Clear redo stack when new action is performed
+        this.redoStack = [];
     }
 
     setupEventListeners() {
@@ -288,15 +303,45 @@ class AnimationMaker {
         // Frame controls
         document.getElementById('addFrameBtn').addEventListener('click', () => this.addFrame());
         document.getElementById('removeFrameBtn').addEventListener('click', () => this.removeFrame());
+        document.getElementById('copyFrameBtn').addEventListener('click', () => this.duplicateFrame());
 
         // Playback controls
         document.getElementById('playBtn').addEventListener('click', () => this.togglePlayback());
         document.getElementById('stopBtn').addEventListener('click', () => this.stopPlayback());
         document.getElementById('prevFrameBtn').addEventListener('click', () => this.previousFrame());
         document.getElementById('nextFrameBtn').addEventListener('click', () => this.nextFrame());
-        document.getElementById('playbackSpeed').addEventListener('input', (e) => {
-            this.playbackSpeed = parseInt(e.target.value);
-            document.getElementById('fpsDisplay').textContent = this.playbackSpeed;
+        // Playback speed controls - handle both sliders
+        const playbackSpeedElements = ['playbackSpeed', 'headerPlaybackSpeed'];
+        playbackSpeedElements.forEach(elementId => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.addEventListener('input', (e) => {
+                    this.playbackSpeed = parseInt(e.target.value);
+                    
+                    // Update all speed displays
+                    const speedDisplays = document.querySelectorAll('#speedValue');
+                    speedDisplays.forEach(display => {
+                        display.textContent = this.playbackSpeed;
+                    });
+                    
+                    // Sync both sliders
+                    playbackSpeedElements.forEach(id => {
+                        const slider = document.getElementById(id);
+                        if (slider && slider !== e.target) {
+                            slider.value = this.playbackSpeed;
+                        }
+                    });
+                    
+                    // If currently playing, restart with new speed
+                    if (this.isPlaying) {
+                        clearInterval(this.playInterval);
+                        this.playInterval = setInterval(() => {
+                            this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+                            this.loadFrame(this.currentFrame);
+                        }, 1000 / this.playbackSpeed);
+                    }
+                });
+            }
         });
 
         // Zoom controls
@@ -305,24 +350,46 @@ class AnimationMaker {
         document.getElementById('zoomResetBtn').addEventListener('click', () => this.resetZoom());
         document.getElementById('fitScreenBtn').addEventListener('click', () => this.resetZoomToFit());
 
-        // Onion skin toggle
-        const onionSkinToggle = document.getElementById('onionSkinToggle');
-        if (onionSkinToggle) {
-            onionSkinToggle.addEventListener('change', (e) => {
+        // Onion skin toggle - sync all instances
+        const onionSkinToggles = document.querySelectorAll('#onionSkinToggle');
+        onionSkinToggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
                 this.onionSkinEnabled = e.target.checked;
+                // Sync all onion skin toggles
+                onionSkinToggles.forEach(t => {
+                    if (t !== e.target) t.checked = e.target.checked;
+                });
                 this.redrawCanvas();
             });
-        }
+        });
         
-        // Background controls
-        document.getElementById('backgroundToggle').addEventListener('change', (e) => {
+        // Background controls (create if missing)
+        let backgroundToggle = document.getElementById('backgroundToggle');
+        if (!backgroundToggle) {
+            backgroundToggle = document.createElement('input');
+            backgroundToggle.type = 'checkbox';
+            backgroundToggle.id = 'backgroundToggle';
+            backgroundToggle.style.display = 'none';
+            document.body.appendChild(backgroundToggle);
+        }
+        backgroundToggle.addEventListener('change', (e) => {
             this.backgroundEnabled = e.target.checked;
             this.redrawCanvas();
         });
         
-        document.getElementById('backgroundColor').addEventListener('input', (e) => {
+        let backgroundColor = document.getElementById('backgroundColor');
+        if (!backgroundColor) {
+            backgroundColor = document.createElement('input');
+            backgroundColor.type = 'color';
+            backgroundColor.id = 'backgroundColor';
+            backgroundColor.value = '#ffffff';
+            backgroundColor.style.display = 'none';
+            document.body.appendChild(backgroundColor);
+        }
+        backgroundColor.addEventListener('input', (e) => {
             this.backgroundColor = e.target.value;
-            if (document.getElementById('allFramesToggle').checked) {
+            const allFramesToggle = document.getElementById('allFramesToggle');
+            if (allFramesToggle && allFramesToggle.checked) {
                 this.frames.forEach(frame => {
                     frame.backgroundColor = this.backgroundColor;
                 });
@@ -332,7 +399,15 @@ class AnimationMaker {
             this.redrawCanvas();
         });
         
-        document.getElementById('allFramesToggle').addEventListener('change', (e) => {
+        let allFramesToggle = document.getElementById('allFramesToggle');
+        if (!allFramesToggle) {
+            allFramesToggle = document.createElement('input');
+            allFramesToggle.type = 'checkbox';
+            allFramesToggle.id = 'allFramesToggle';
+            allFramesToggle.style.display = 'none';
+            document.body.appendChild(allFramesToggle);
+        }
+        allFramesToggle.addEventListener('change', (e) => {
             if (e.target.checked && this.backgroundEnabled) {
                 this.frames.forEach(frame => {
                     frame.backgroundColor = this.backgroundColor;
@@ -370,6 +445,77 @@ class AnimationMaker {
                 this.redrawCanvas();
             }
         });
+        
+        // Canvas size controls
+        document.getElementById('canvasSizeSelect').addEventListener('change', (e) => {
+            const customInputs = document.getElementById('customSizeInputs');
+            if (e.target.value === 'custom') {
+                customInputs.style.display = 'block';
+            } else {
+                customInputs.style.display = 'none';
+                const [width, height] = e.target.value.split('x').map(Number);
+                this.resizeCanvas(width, height);
+            }
+        });
+        
+        document.getElementById('applyCanvasSize').addEventListener('click', () => {
+            const width = parseInt(document.getElementById('customWidth').value);
+            const height = parseInt(document.getElementById('customHeight').value);
+            this.resizeCanvas(width, height);
+        });
+        
+        // Drawing mode controls
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('active');
+                    if (b.dataset.mode === 'original') {
+                        b.style.background = 'white';
+                        b.style.color = '#28a745';
+                        b.style.boxShadow = 'none';
+                    } else {
+                        b.style.background = 'white';
+                        b.style.color = '#6f42c1';
+                    }
+                });
+                btn.classList.add('active');
+                if (btn.dataset.mode === 'original') {
+                    btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    btn.style.color = 'white';
+                    btn.style.boxShadow = '0 4px 12px rgba(40, 167, 69, 0.3)';
+                } else {
+                    btn.style.background = 'linear-gradient(135deg, #6f42c1, #5a2d91)';
+                    btn.style.color = 'white';
+                    btn.style.boxShadow = '0 4px 12px rgba(111, 66, 193, 0.3)';
+                }
+                this.drawingMode = btn.dataset.mode;
+                
+                // Show/hide pixel level settings
+                const pixelSettings = document.getElementById('pixelLevelSettings');
+                if (btn.dataset.mode === 'pixel') {
+                    pixelSettings.style.display = 'block';
+                } else {
+                    pixelSettings.style.display = 'none';
+                }
+                
+                this.updateCanvasRendering();
+            });
+        });
+        
+        // Pixel level controls
+        document.querySelectorAll('.pixel-level-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.pixel-level-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'white';
+                    b.style.color = '#6f42c1';
+                });
+                btn.classList.add('active');
+                btn.style.background = '#6f42c1';
+                btn.style.color = 'white';
+                this.pixelSize = parseInt(btn.dataset.level);
+            });
+        });
 
         // Canvas mouse events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -377,6 +523,11 @@ class AnimationMaker {
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        
+        // Touch events for mobile panning
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e));
         
         // Prevent context menu on middle click
         this.canvas.addEventListener('auxclick', (e) => {
@@ -439,6 +590,14 @@ class AnimationMaker {
             btn.addEventListener('click', (e) => {
                 const tabName = btn.dataset.tab;
                 this.switchTab(tabName);
+            });
+        });
+        
+        // Theme switching
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const theme = btn.dataset.theme;
+                this.switchTheme(theme);
             });
         });
 
@@ -604,10 +763,50 @@ class AnimationMaker {
     }
 
     // Drawing
+    resizeCanvas(width, height) {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.overlayCanvas.width = width;
+        this.overlayCanvas.height = height;
+        this.redrawCanvas();
+    }
+    
+    updateCanvasRendering() {
+        if (this.drawingMode === 'pixel') {
+            this.ctx.imageSmoothingEnabled = false;
+            this.overlayCtx.imageSmoothingEnabled = false;
+        } else {
+            this.ctx.imageSmoothingEnabled = true;
+            this.overlayCtx.imageSmoothingEnabled = true;
+        }
+        this.redrawCanvas();
+    }
+    
+    snapToPixelGrid(x, y) {
+        if (this.drawingMode === 'pixel') {
+            return {
+                x: Math.floor(x / this.pixelSize) * this.pixelSize,
+                y: Math.floor(y / this.pixelSize) * this.pixelSize
+            };
+        }
+        return { x, y };
+    }
+
     redrawCanvas() {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        
+        // Set rendering mode
+        if (this.drawingMode === 'pixel') {
+            this.ctx.imageSmoothingEnabled = false;
+            this.overlayCtx.imageSmoothingEnabled = false;
+        } else {
+            this.ctx.imageSmoothingEnabled = true;
+            this.overlayCtx.imageSmoothingEnabled = true;
+        }
         
         // Draw background if enabled
         if (this.backgroundEnabled) {
@@ -617,7 +816,6 @@ class AnimationMaker {
         }
         
         this.ctx.save();
-        this.ctx.scale(this.zoom, this.zoom);
 
         // Onion skinning
         if (this.onionSkinEnabled) {
@@ -668,83 +866,44 @@ class AnimationMaker {
     }
 
     drawObject(obj) {
+        // Apply pixel mode settings for this object
+        if (this.drawingMode === 'pixel') {
+            this.ctx.imageSmoothingEnabled = false;
+            this.ctx.lineWidth = obj.data.lineWidth || this.pixelSize;
+        } else {
+            this.ctx.imageSmoothingEnabled = true;
+            this.ctx.lineWidth = obj.data.lineWidth || this.brushSize;
+        }
+        
         this.ctx.strokeStyle = obj.data.color || this.primaryColor;
         this.ctx.fillStyle = obj.data.color || this.primaryColor;
-        this.ctx.lineWidth = obj.data.lineWidth || this.brushSize;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
+        this.ctx.lineCap = this.drawingMode === 'pixel' ? 'square' : 'round';
+        this.ctx.lineJoin = this.drawingMode === 'pixel' ? 'miter' : 'round';
 
         const w = obj.data.width || 50;
         const h = obj.data.height || 50;
 
         switch (obj.type) {
             case 'line':
-                this.ctx.beginPath();
-                this.ctx.moveTo(obj.data.startX || -w/2, obj.data.startY || -h/2);
-                this.ctx.lineTo(obj.data.endX || w/2, obj.data.endY || h/2);
-                this.ctx.stroke();
+                this.drawPixelAwareLine(obj, w, h);
                 break;
             case 'circle':
-                this.ctx.beginPath();
-                const radiusX = obj.data.radiusX || w/2;
-                const radiusY = obj.data.radiusY || h/2;
-                this.ctx.save();
-                this.ctx.scale(radiusX / Math.max(radiusX, radiusY), radiusY / Math.max(radiusX, radiusY));
-                this.ctx.arc(0, 0, Math.max(radiusX, radiusY), 0, 2 * Math.PI);
-                this.ctx.restore();
-                if (obj.data.fillColor) {
-                    this.ctx.fillStyle = obj.data.fillColor;
-                    this.ctx.fill();
-                }
-                this.ctx.stroke();
+                this.drawPixelAwareCircle(obj, w, h);
                 break;
             case 'semicircle':
-                this.ctx.beginPath();
-                const semiRadiusX = obj.data.radiusX || w/2;
-                const semiRadiusY = obj.data.radiusY || h/2;
-                this.ctx.save();
-                this.ctx.scale(semiRadiusX / Math.max(semiRadiusX, semiRadiusY), semiRadiusY / Math.max(semiRadiusX, semiRadiusY));
-                this.ctx.arc(0, 0, Math.max(semiRadiusX, semiRadiusY), 0, Math.PI);
-                this.ctx.restore();
-                this.ctx.closePath();
-                if (obj.data.fillColor) {
-                    this.ctx.fillStyle = obj.data.fillColor;
-                    this.ctx.fill();
-                }
-                this.ctx.stroke();
+                this.drawPixelAwareSemicircle(obj, w, h);
                 break;
             case 'square':
-                this.ctx.beginPath();
-                this.ctx.rect(-w/2, -h/2, w, h);
-                if (obj.data.fillColor) {
-                    this.ctx.fillStyle = obj.data.fillColor;
-                    this.ctx.fill();
-                }
-                this.ctx.stroke();
+                this.drawPixelAwareSquare(obj, w, h);
                 break;
             case 'triangle':
-                this.ctx.beginPath();
-                this.ctx.moveTo(0, -h/2);
-                this.ctx.lineTo(-w/2, h/2);
-                this.ctx.lineTo(w/2, h/2);
-                this.ctx.closePath();
-                if (obj.data.fillColor) {
-                    this.ctx.fillStyle = obj.data.fillColor;
-                    this.ctx.fill();
-                }
-                this.ctx.stroke();
+                this.drawPixelAwareTriangle(obj, w, h);
                 break;
             case 'star':
-                const starRadiusX = obj.data.radiusX || w/2;
-                const starRadiusY = obj.data.radiusY || h/2;
-                this.ctx.save();
-                this.ctx.scale(starRadiusX / Math.max(starRadiusX, starRadiusY), starRadiusY / Math.max(starRadiusX, starRadiusY));
-                const maxRadius = Math.max(starRadiusX, starRadiusY);
-                this.drawStar(0, 0, 5, maxRadius, maxRadius * 0.4, obj.data.fillColor);
-                this.ctx.restore();
+                this.drawPixelAwareStar(obj, w, h);
                 break;
             case 'arrow':
-                this.drawArrow(-w/2, 0, w/2, 0, obj.data.fillColor);
+                this.drawPixelAwareArrow(obj, w, h);
                 break;
             case 'text':
                 this.ctx.font = `${obj.data.fontSize}px ${obj.data.fontFamily}`;
@@ -764,6 +923,7 @@ class AnimationMaker {
                             this.ctx.fill();
                         }
                     }
+                    this.ctx.strokeStyle = obj.data.color || this.primaryColor;
                     this.ctx.stroke();
                 }
                 break;
@@ -946,6 +1106,11 @@ class AnimationMaker {
                 
                 this.ctx.restore();
                 break;
+            case 'flood-fill':
+                if (obj.data.image) {
+                    this.ctx.drawImage(obj.data.image, -obj.data.width/2, -obj.data.height/2, obj.data.width, obj.data.height);
+                }
+                break;
             case 'image':
                 if (obj.data.image) {
                     this.ctx.save();
@@ -1051,7 +1216,6 @@ class AnimationMaker {
         const bounds = this.getObjectBounds(this.selectedObject);
         
         this.overlayCtx.save();
-        this.overlayCtx.scale(this.zoom, this.zoom);
         
 
 
@@ -1137,12 +1301,11 @@ class AnimationMaker {
     // Mouse handling
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        return {
-            x: (e.clientX - rect.left) * scaleX / this.zoom,
-            y: (e.clientY - rect.top) * scaleY / this.zoom
+        const pos = {
+            x: (e.clientX - rect.left) * (this.canvas.width / rect.width),
+            y: (e.clientY - rect.top) * (this.canvas.height / rect.height)
         };
+        return this.snapToPixelGrid(pos.x, pos.y);
     }
 
     handleMouseDown(e) {
@@ -1162,21 +1325,8 @@ class AnimationMaker {
         this.startY = pos.y;
 
         if (this.currentTool === 'flood-fill') {
-            const clickedObject = this.findObjectAtPosition(pos.x, pos.y);
-            const fillColor = e.button === 2 ? this.secondaryColor : this.primaryColor;
-            
-            if (clickedObject) {
-                if (e.button === 2) {
-                    clickedObject.data.fillColor = fillColor;
-                } else {
-                    clickedObject.data.color = fillColor;
-                }
-                this.selectedObject = clickedObject;
-                this.updatePropertiesPanel();
-                this.updateObjectsList();
-                this.redrawCanvas();
-                this.saveState();
-            }
+            this.performFloodFill(pos.x, pos.y, this.primaryColor);
+            this.saveState();
             return;
         }
 
@@ -1192,6 +1342,14 @@ class AnimationMaker {
 
         if (this.currentTool === 'zoom-reset') {
             this.resetZoomToFit();
+            return;
+        }
+
+        if (this.currentTool === 'pan') {
+            this.isPanning = true;
+            this.panStart = { x: e.clientX, y: e.clientY };
+            this.canvas.style.cursor = 'grabbing';
+            e.preventDefault();
             return;
         }
 
@@ -1586,11 +1744,13 @@ class AnimationMaker {
     updateCanvasCursor() {
         switch (this.currentTool) {
             case 'move': this.canvas.style.cursor = 'default'; break;
+            case 'pan': this.canvas.style.cursor = 'grab'; break;
             case 'bone': this.canvas.style.cursor = 'grab'; break;
             case 'text': this.canvas.style.cursor = 'text'; break;
             case 'zoom-in': this.canvas.style.cursor = 'zoom-in'; break;
             case 'zoom-out': this.canvas.style.cursor = 'zoom-out'; break;
             case 'zoom-reset': this.canvas.style.cursor = 'crosshair'; break;
+            case 'flood-fill': this.canvas.style.cursor = 'pointer'; break;
             default: this.canvas.style.cursor = 'crosshair'; break;
         }
     }
@@ -1676,19 +1836,17 @@ class AnimationMaker {
             objDiv.appendChild(expandBtn);
         }
 
+        // Enhanced icon container
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'layer-icon';
         const icon = document.createElement('i');
         if (obj.type === 'group' && obj.data && obj.data.effectType) {
             icon.className = this.getEffectIcon(obj.data.effectType);
-            const colors = {
-                fire: '#ff6b35', rain: '#4a90e2', snow: '#87ceeb',
-                lightning: '#ffd700', lightbeam: '#ffff99',
-                smoke: '#666', fog: '#b0c4de'
-            };
-            icon.style.color = colors[obj.data.effectType] || '#666';
         } else {
             icon.className = this.getObjectIcon(obj.type);
         }
-        objDiv.appendChild(icon);
+        iconContainer.appendChild(icon);
+        objDiv.appendChild(iconContainer);
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'layer-name';
@@ -1813,24 +1971,27 @@ class AnimationMaker {
 
     getObjectIcon(type) {
         const icons = {
-            line: 'fas fa-minus',
-            circle: 'fas fa-circle',
+            line: 'fas fa-grip-lines',
+            circle: 'far fa-circle',
             semicircle: 'fas fa-adjust',
-            square: 'fas fa-square',
+            square: 'far fa-square',
             triangle: 'fas fa-play',
             star: 'fas fa-star',
-            arrow: 'fas fa-location-arrow',
+            arrow: 'fas fa-long-arrow-alt-right',
             text: 'fas fa-font',
-            pencil: 'fas fa-pencil-alt',
-            path: 'fas fa-pencil-alt',
+            pencil: 'fas fa-pen-nib',
+            path: 'fas fa-draw-polygon',
             eraser: 'fas fa-eraser',
             'flood-fill': 'fas fa-fill-drip',
-            group: 'fas fa-folder',
-            raindrop: 'fas fa-tint',
+            group: 'fas fa-layer-group',
+            raindrop: 'fas fa-droplet',
             snowflake: 'fas fa-snowflake',
-            flame: 'fas fa-fire'
+            flame: 'fas fa-fire-flame-curved',
+            image: 'fas fa-image',
+            move: 'fas fa-arrows-alt',
+            pan: 'fas fa-hand-paper'
         };
-        return icons[type] || 'fas fa-shapes';
+        return icons[type] || 'fas fa-vector-square';
     }
 
     getEffectIcon(effectType) {
@@ -1888,134 +2049,109 @@ class AnimationMaker {
         this.frames.forEach((frame, index) => {
             const frameDiv = document.createElement('div');
             frameDiv.className = 'frame-item';
-            frameDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; min-width: 120px; padding: 10px; border-radius: 8px; background: #f8f9fa; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease;';
+            frameDiv.style.cssText = `
+                min-width: 120px;
+                padding: 12px;
+                border-radius: 12px;
+                background: ${index === this.currentFrame ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'};
+                border: 3px solid ${index === this.currentFrame ? '#6f42c1' : '#e9ecef'};
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                box-shadow: ${index === this.currentFrame ? '0 8px 25px rgba(111, 66, 193, 0.3)' : '0 4px 12px rgba(0,0,0,0.1)'};
+                transform: ${index === this.currentFrame ? 'scale(1.05) translateY(-3px)' : 'scale(1)'};
+                color: ${index === this.currentFrame ? 'white' : '#333'};
+            `;
             
-            if (index === this.currentFrame) {
-                frameDiv.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                frameDiv.style.borderColor = '#6f42c1';
-                frameDiv.style.color = 'white';
-                frameDiv.style.transform = 'scale(1.05)';
-            }
+            // Create fancy thumbnail
+            const thumbnail = document.createElement('div');
+            thumbnail.style.cssText = `
+                width: 90px;
+                height: 65px;
+                border-radius: 8px;
+                border: 2px solid ${index === this.currentFrame ? 'rgba(255,255,255,0.3)' : '#ddd'};
+                background: ${index === this.currentFrame ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'};
+                margin-bottom: 8px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: bold;
+                position: relative;
+                overflow: hidden;
+            `;
             
-            const thumbnail = document.createElement('canvas');
-            thumbnail.className = 'frame-thumbnail';
-            thumbnail.width = 100;
-            thumbnail.height = 75;
-            thumbnail.style.cssText = 'border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); border: 2px solid rgba(255,255,255,0.8);';
+            // Add film strip effect
+            const filmStrip = document.createElement('div');
+            filmStrip.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: ${index === this.currentFrame ? 'rgba(255,255,255,0.3)' : '#6f42c1'};
+            `;
+            thumbnail.appendChild(filmStrip);
             
-            // Draw frame preview
-            const thumbCtx = thumbnail.getContext('2d');
-            thumbCtx.fillStyle = 'white';
-            thumbCtx.fillRect(0, 0, 100, 75);
-            
-            // Add border
-            thumbCtx.strokeStyle = index === this.currentFrame ? '#4f46e5' : '#e9ecef';
-            thumbCtx.lineWidth = index === this.currentFrame ? 2 : 1;
-            thumbCtx.strokeRect(0, 0, 100, 75);
-            
-            thumbCtx.save();
-            thumbCtx.scale(0.05, 0.05);
-            if (frame.objects) {
-                frame.objects.forEach(obj => {
-                    if (obj.visible) {
-                        thumbCtx.save();
-                        thumbCtx.translate(obj.x, obj.y);
-                        thumbCtx.rotate(obj.rotation);
-                        thumbCtx.scale(obj.scaleX, obj.scaleY);
-                        this.drawObjectOnContext(obj, thumbCtx);
-                        thumbCtx.restore();
-                    }
-                });
-            }
-            thumbCtx.restore();
-            
-            thumbnail.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.loadFrame(index);
-            });
-            
-            // Add drag and drop
-            frameDiv.draggable = true;
-            frameDiv.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', index);
-                frameDiv.style.opacity = '0.5';
-            });
-            
-            frameDiv.addEventListener('dragend', (e) => {
-                frameDiv.style.opacity = '1';
-            });
-            
-            frameDiv.addEventListener('dragover', (e) => {
-                e.preventDefault();
-            });
-            
-            frameDiv.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                if (draggedIndex !== index) {
-                    this.moveFrame(draggedIndex, index);
-                }
-            });
-            
-            // Right-click to rename
-            frameDiv.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                this.renameFrame(index);
-            });
+            // Add object count with icon
+            const objectInfo = document.createElement('div');
+            objectInfo.innerHTML = `<i class="fas fa-shapes" style="margin-right: 4px;"></i>${frame.objects ? frame.objects.length : 0}`;
+            objectInfo.style.cssText = `
+                font-size: 12px;
+                font-weight: 600;
+                color: ${index === this.currentFrame ? 'white' : '#6f42c1'};
+            `;
+            thumbnail.appendChild(objectInfo);
             
             frameDiv.appendChild(thumbnail);
             
+            // Frame label with better styling
             const frameLabel = document.createElement('div');
             frameLabel.textContent = frame.name || `Frame ${index + 1}`;
-            frameLabel.style.cssText = 'font-size: 12px; font-weight: 600; margin-top: 8px; text-align: center; opacity: 0.9;';
-            frameLabel.addEventListener('dblclick', () => this.renameFrame(index));
+            frameLabel.style.cssText = `
+                font-size: 12px;
+                font-weight: 600;
+                margin-bottom: 4px;
+                max-width: 110px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            `;
             frameDiv.appendChild(frameLabel);
             
-            const frameInfo = document.createElement('div');
-            frameInfo.textContent = `${frame.objects ? frame.objects.length : 0} objects`;
-            frameInfo.style.cssText = 'font-size: 10px; opacity: 0.7; margin-top: 2px; text-align: center;';
-            frameDiv.appendChild(frameInfo);
+            // Duration indicator
+            const duration = document.createElement('div');
+            duration.innerHTML = `<i class="fas fa-clock" style="margin-right: 3px;"></i>1.0s`;
+            duration.style.cssText = `
+                font-size: 10px;
+                opacity: 0.8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            frameDiv.appendChild(duration);
             
-            // Add hover effects
-            frameDiv.addEventListener('mouseenter', () => {
-                if (index !== this.currentFrame) {
-                    frameDiv.style.background = '#e9ecef';
-                    frameDiv.style.transform = 'translateY(-2px)';
-                }
+            frameDiv.addEventListener('click', () => {
+                this.loadFrame(index);
             });
             
-            frameDiv.addEventListener('mouseleave', () => {
-                if (index !== this.currentFrame) {
-                    frameDiv.style.background = '#f8f9fa';
-                    frameDiv.style.transform = 'translateY(0)';
-                }
+            frameDiv.addEventListener('dblclick', () => {
+                this.renameFrame(index);
             });
+            
+
             
             timeline.appendChild(frameDiv);
         });
     }
 
-    drawObjectOnContext(obj, ctx) {
-        ctx.strokeStyle = obj.data.color || this.primaryColor;
-        ctx.fillStyle = obj.data.fillColor || obj.data.color || this.primaryColor;
-        ctx.lineWidth = obj.data.lineWidth || this.brushSize;
-        
-        const w = obj.data.width || 50;
-        const h = obj.data.height || 50;
-        
-        switch (obj.type) {
-            case 'circle':
-                ctx.beginPath();
-                ctx.arc(0, 0, Math.min(w, h)/2, 0, 2 * Math.PI);
-                ctx.stroke();
-                break;
-            case 'square':
-                ctx.beginPath();
-                ctx.rect(-w/2, -h/2, w, h);
-                ctx.stroke();
-                break;
-        }
-    }
+
+
+
 
     loadFrame(frameIndex) {
         if (frameIndex >= 0 && frameIndex < this.frames.length) {
@@ -2028,24 +2164,7 @@ class AnimationMaker {
         }
     }
 
-    moveFrame(fromIndex, toIndex) {
-        if (fromIndex === toIndex) return;
-        
-        const frame = this.frames.splice(fromIndex, 1)[0];
-        this.frames.splice(toIndex, 0, frame);
-        
-        // Update current frame index
-        if (this.currentFrame === fromIndex) {
-            this.currentFrame = toIndex;
-        } else if (fromIndex < this.currentFrame && toIndex >= this.currentFrame) {
-            this.currentFrame--;
-        } else if (fromIndex > this.currentFrame && toIndex <= this.currentFrame) {
-            this.currentFrame++;
-        }
-        
-        this.updateFramesTimeline();
-        this.updateFrameDisplay();
-    }
+
 
     renameFrame(frameIndex) {
         const currentName = this.frames[frameIndex].name || `Frame ${frameIndex + 1}`;
@@ -2125,20 +2244,33 @@ class AnimationMaker {
         URL.revokeObjectURL(url);
     }
 
-    // Missing toolbar functions
+    // Undo/Redo functionality
     undo() {
-        if (this.history.length > 0) {
-            const lastState = this.history.pop();
-            this.frames = lastState;
+        if (this.history.length > 1) {
+            this.redoStack = this.redoStack || [];
+            const currentState = this.history.pop();
+            this.redoStack.push(currentState);
+            const previousState = this.history[this.history.length - 1];
+            this.frames = JSON.parse(JSON.stringify(previousState));
             this.selectedObject = null;
             this.updateObjectsList();
+            this.updateFramesTimeline();
+            this.updateFrameDisplay();
             this.redrawCanvas();
         }
     }
 
     redo() {
-        // Simple redo implementation
-        console.log('Redo functionality');
+        if (this.redoStack && this.redoStack.length > 0) {
+            const redoState = this.redoStack.pop();
+            this.history.push(redoState);
+            this.frames = JSON.parse(JSON.stringify(redoState));
+            this.selectedObject = null;
+            this.updateObjectsList();
+            this.updateFramesTimeline();
+            this.updateFrameDisplay();
+            this.redrawCanvas();
+        }
     }
 
     copyObject() {
@@ -2149,6 +2281,27 @@ class AnimationMaker {
 
     copyFrame() {
         this.frameClipboard = JSON.parse(JSON.stringify(this.frames[this.currentFrame]));
+    }
+
+    duplicateFrame() {
+        const currentFrameData = JSON.parse(JSON.stringify(this.frames[this.currentFrame]));
+        currentFrameData.objects.forEach(obj => {
+            obj.id = ++this.objectIdCounter;
+            if (obj.type === 'group' && obj.objects) {
+                obj.objects.forEach(groupObj => {
+                    groupObj.id = ++this.objectIdCounter;
+                });
+            }
+        });
+        currentFrameData.name = `${currentFrameData.name || 'Frame'} Copy`;
+        this.frames.splice(this.currentFrame + 1, 0, currentFrameData);
+        this.currentFrame++;
+        this.selectedObject = null;
+        this.updateFramesTimeline();
+        this.updateFrameDisplay();
+        this.updateObjectsList();
+        this.redrawCanvas();
+        this.saveState();
     }
 
     pasteFrame() {
@@ -2275,7 +2428,8 @@ class AnimationMaker {
     applyZoom() {
         const canvasContainer = document.querySelector('.canvas-container-inner');
         if (canvasContainer) {
-            canvasContainer.style.transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.zoom})`;
+            canvasContainer.style.transform = `scale(${this.zoom}) translate(${this.panOffset.x}px, ${this.panOffset.y}px)`;
+            canvasContainer.style.transformOrigin = 'center center';
         }
     }
     
@@ -2323,10 +2477,27 @@ class AnimationMaker {
 
     handleWheel(e) {
         e.preventDefault();
-        if (e.deltaY < 0) {
-            this.zoomIn();
+        
+        // Check if it's a pinch gesture (ctrlKey) or two-finger pan
+        if (e.ctrlKey) {
+            // Pinch to zoom
+            if (e.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
+        } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            // Two-finger pan (horizontal)
+            this.panOffset.x -= e.deltaX * 0.5;
+            this.panOffset.y -= e.deltaY * 0.5;
+            this.applyZoom();
         } else {
-            this.zoomOut();
+            // Regular scroll - zoom
+            if (e.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
         }
     }
 
@@ -2336,76 +2507,27 @@ class AnimationMaker {
             return;
         }
 
-        const format = await this.showExportDialog();
-        if (!format) return;
+        const exportOptions = await this.showExportDialog();
+        if (!exportOptions) return;
 
-        if (format === 'gif') {
-            this.exportGIF();
+        const fps = exportOptions.fps === 'current' ? this.playbackSpeed : parseInt(exportOptions.fps) || this.playbackSpeed;
+        
+        if (exportOptions.format === 'images') {
+            this.exportImageSequence(exportOptions.quality, fps);
             return;
         }
         
-        if (format === 'jpeg') {
-            this.exportJPEG();
+        if (exportOptions.format === 'video') {
+            this.exportVideoFile(exportOptions.quality, fps);
             return;
-        }
-
-        try {
-            const mimeType = this.getSupportedMimeType();
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = this.canvas.width;
-            exportCanvas.height = this.canvas.height;
-            const exportCtx = exportCanvas.getContext('2d');
-            
-            const stream = exportCanvas.captureStream(0);
-            const recorder = new MediaRecorder(stream, {
-                mimeType: mimeType,
-                videoBitsPerSecond: 8000000
-            });
-            
-            const chunks = [];
-            recorder.ondataavailable = (e) => chunks.push(e.data);
-            
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `animation_${this.frames.length}frames_${this.playbackSpeed}fps.${mimeType.includes('av01') ? 'mp4' : 'webm'}`;
-                link.click();
-                URL.revokeObjectURL(url);
-            };
-            
-            const progress = this.showExportProgress();
-            recorder.start();
-            
-            const frameDuration = 1000 / this.playbackSpeed;
-            
-            for (let i = 0; i < this.frames.length; i++) {
-                await this.renderFrameToCanvas(this.frames[i], exportCtx, exportCanvas);
-                stream.getVideoTracks()[0].requestFrame();
-                progress.update(i + 1, this.frames.length);
-                
-                if (i < this.frames.length - 1) {
-                    await this.delay(frameDuration);
-                }
-            }
-            
-            await this.delay(frameDuration);
-            recorder.stop();
-            progress.close();
-            
-        } catch (error) {
-            alert('Video export failed. Check console for details.');
-            console.error(error);
         }
     }
 
     getSupportedMimeType() {
         const types = [
-            'video/mp4; codecs="av01.0.08M.08"',
-            'video/webm; codecs="av01.0.08M.08"',
             'video/webm; codecs="vp9"',
-            'video/webm; codecs="vp8"'
+            'video/webm; codecs="vp8"',
+            'video/webm'
         ];
         
         for (const type of types) {
@@ -2488,55 +2610,139 @@ class AnimationMaker {
     showExportDialog() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(10px);';
             
             const content = document.createElement('div');
-            content.style.cssText = 'background:white;padding:30px;border-radius:15px;text-align:center;min-width:400px;box-shadow:0 10px 30px rgba(0,0,0,0.3);';
+            content.style.cssText = 'background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:40px;border-radius:25px;text-align:center;min-width:600px;box-shadow:0 25px 50px rgba(0,0,0,0.5);color:white;position:relative;overflow:hidden;';
+            
+            // Add animated background
+            const bgEffect = document.createElement('div');
+            bgEffect.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(45deg,rgba(255,255,255,0.1) 0%,transparent 50%,rgba(255,255,255,0.1) 100%);background-size:200% 200%;animation:shimmer 3s ease-in-out infinite;pointer-events:none;';
+            content.appendChild(bgEffect);
             
             const title = document.createElement('h2');
-            title.textContent = 'Export Animation';
-            title.style.cssText = 'margin:0 0 20px;color:#333;';
+            title.innerHTML = '<i class="fas fa-download" style="color:#ffd700;margin-right:10px;"></i>Export Your Animation';
+            title.style.cssText = 'margin:0 0 15px;font-size:2.2em;text-shadow:0 2px 10px rgba(0,0,0,0.3);position:relative;z-index:2;';
             
             const subtitle = document.createElement('p');
-            subtitle.textContent = 'Choose your export format:';
-            subtitle.style.cssText = 'margin:0 0 30px;color:#666;';
+            subtitle.textContent = 'Choose your preferred export format and quality';
+            subtitle.style.cssText = 'margin:0 0 35px;font-size:1.1em;opacity:0.9;position:relative;z-index:2;';
+            
+            const optionsContainer = document.createElement('div');
+            optionsContainer.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;position:relative;z-index:2;';
             
             const videoBtn = document.createElement('button');
-            videoBtn.innerHTML = '<i class="fas fa-video" style="font-size:2em;margin-bottom:10px;color:#4f46e5;"></i><br><strong>Video (MP4/WebM)</strong><br><small>High quality, smaller file size</small>';
-            videoBtn.style.cssText = 'background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:20px;margin:10px;border-radius:10px;cursor:pointer;min-width:150px;transition:transform 0.2s;';
+            videoBtn.innerHTML = `
+                <div style="background:rgba(255,255,255,0.1);border-radius:15px;padding:25px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <i class="fas fa-video" style="font-size:3em;margin-bottom:15px;color:#4f46e5;"></i>
+                    <h3 style="margin:0 0 8px;font-size:1.3em;">Video Export</h3>
+                    <p style="margin:0 0 10px;font-size:0.9em;opacity:0.8;">MP4/WebM Format</p>
+                    <div style="background:rgba(79,70,229,0.2);padding:5px 10px;border-radius:15px;font-size:0.8em;">
+                        ✨ High Quality • Small Size
+                    </div>
+                </div>
+            `;
+            videoBtn.style.cssText = 'background:linear-gradient(135deg,rgba(79,70,229,0.8),rgba(124,58,237,0.8));color:white;border:2px solid rgba(255,255,255,0.3);border-radius:20px;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px);';
             
-            const gifBtn = document.createElement('button');
-            gifBtn.innerHTML = '<i class="fas fa-images" style="font-size:2em;margin-bottom:10px;color:#ff6b35;"></i><br><strong>Animated GIF</strong><br><small>Universal compatibility</small>';
-            gifBtn.style.cssText = 'background:linear-gradient(135deg,#ff6b35,#f7931e);color:white;border:none;padding:20px;margin:10px;border-radius:10px;cursor:pointer;min-width:150px;transition:transform 0.2s;';
+            const imageBtn = document.createElement('button');
+            imageBtn.innerHTML = `
+                <div style="background:rgba(255,255,255,0.1);border-radius:15px;padding:25px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <i class="fas fa-images" style="font-size:3em;margin-bottom:15px;color:#22c55e;"></i>
+                    <h3 style="margin:0 0 8px;font-size:1.3em;">Image Sequence</h3>
+                    <p style="margin:0 0 10px;font-size:0.9em;opacity:0.8;">PNG/JPEG Frames</p>
+                    <div style="background:rgba(34,197,94,0.2);padding:5px 10px;border-radius:15px;font-size:0.8em;">
+                        🎨 Perfect Quality • Frame Control
+                    </div>
+                </div>
+            `;
+            imageBtn.style.cssText = 'background:linear-gradient(135deg,rgba(34,197,94,0.8),rgba(22,163,74,0.8));color:white;border:2px solid rgba(255,255,255,0.3);border-radius:20px;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px);';
             
-            const jpegBtn = document.createElement('button');
-            jpegBtn.innerHTML = '<i class="fas fa-file-image" style="font-size:2em;margin-bottom:10px;color:#22c55e;"></i><br><strong>JPEG Sequence</strong><br><small>High quality images</small>';
-            jpegBtn.style.cssText = 'background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border:none;padding:20px;margin:10px;border-radius:10px;cursor:pointer;min-width:150px;transition:transform 0.2s;';
+            // Quality settings
+            const qualitySection = document.createElement('div');
+            qualitySection.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:15px;padding:20px;margin:20px 0;position:relative;z-index:2;';
+            qualitySection.innerHTML = `
+                <h4 style="margin:0 0 15px;display:flex;align-items:center;gap:8px;"><i class="fas fa-sliders-h" style="color:#ffd700;"></i>Export Settings</h4>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;text-align:left;">
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-size:0.9em;">Quality:</label>
+                        <select id="exportQuality" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.9);color:#333;">
+                            <option value="high">High (Best Quality)</option>
+                            <option value="medium" selected>Medium (Balanced)</option>
+                            <option value="low">Low (Smaller Size)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-size:0.9em;">Frame Rate:</label>
+                        <select id="exportFPS" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.9);color:#333;">
+                            <option value="current" selected>Current Speed (${this.playbackSpeed} FPS)</option>
+                            <option value="12">12 FPS (Smooth)</option>
+                            <option value="24">24 FPS (Standard)</option>
+                            <option value="30">30 FPS (High)</option>
+                            <option value="60">60 FPS (Ultra)</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display:flex;gap:15px;justify-content:center;position:relative;z-index:2;';
             
             const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = 'Cancel';
-            cancelBtn.style.cssText = 'background:#ccc;color:#333;border:none;padding:10px 20px;margin:20px 10px 0;border-radius:5px;cursor:pointer;';
+            cancelBtn.innerHTML = '<i class="fas fa-times" style="margin-right:8px;"></i>Cancel';
+            cancelBtn.style.cssText = 'background:rgba(239,68,68,0.8);border:2px solid rgba(255,255,255,0.3);color:white;padding:12px 25px;border-radius:25px;cursor:pointer;font-weight:bold;transition:all 0.3s;backdrop-filter:blur(10px);';
             
-            videoBtn.onmouseover = () => videoBtn.style.transform = 'scale(1.05)';
-            videoBtn.onmouseout = () => videoBtn.style.transform = 'scale(1)';
-            gifBtn.onmouseover = () => gifBtn.style.transform = 'scale(1.05)';
-            gifBtn.onmouseout = () => gifBtn.style.transform = 'scale(1)';
-            jpegBtn.onmouseover = () => jpegBtn.style.transform = 'scale(1.05)';
-            jpegBtn.onmouseout = () => jpegBtn.style.transform = 'scale(1)';
+            // Hover effects
+            [videoBtn, imageBtn, cancelBtn].forEach(btn => {
+                btn.onmouseover = () => {
+                    btn.style.transform = 'translateY(-5px) scale(1.02)';
+                    btn.style.boxShadow = '0 15px 30px rgba(0,0,0,0.3)';
+                };
+                btn.onmouseout = () => {
+                    btn.style.transform = 'translateY(0) scale(1)';
+                    btn.style.boxShadow = 'none';
+                };
+            });
             
-            videoBtn.onclick = () => { document.body.removeChild(modal); resolve('video'); };
-            gifBtn.onclick = () => { document.body.removeChild(modal); resolve('gif'); };
-            jpegBtn.onclick = () => { document.body.removeChild(modal); resolve('jpeg'); };
-            cancelBtn.onclick = () => { document.body.removeChild(modal); resolve(null); };
+            videoBtn.onclick = () => {
+                const quality = document.getElementById('exportQuality').value;
+                const fps = document.getElementById('exportFPS').value;
+                document.body.removeChild(modal);
+                resolve({ format: 'video', quality, fps });
+            };
+            
+            imageBtn.onclick = () => {
+                const quality = document.getElementById('exportQuality').value;
+                const fps = document.getElementById('exportFPS').value;
+                document.body.removeChild(modal);
+                resolve({ format: 'images', quality, fps });
+            };
+            
+            cancelBtn.onclick = () => {
+                document.body.removeChild(modal);
+                resolve(null);
+            };
+            
+            optionsContainer.appendChild(videoBtn);
+            optionsContainer.appendChild(imageBtn);
+            buttonContainer.appendChild(cancelBtn);
             
             content.appendChild(title);
             content.appendChild(subtitle);
-            content.appendChild(videoBtn);
-            content.appendChild(gifBtn);
-            content.appendChild(jpegBtn);
-            content.appendChild(cancelBtn);
+            content.appendChild(optionsContainer);
+            content.appendChild(qualitySection);
+            content.appendChild(buttonContainer);
             modal.appendChild(content);
             document.body.appendChild(modal);
+            
+            // Add shimmer animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+            `;
+            document.head.appendChild(style);
         });
     }
 
@@ -2629,23 +2835,167 @@ class AnimationMaker {
         progress.close();
     }
 
-    createJPEGFromFrames(frameImages) {
+    createImageSequenceZip(frameImages, fps, quality) {
         const zip = new JSZip();
         frameImages.forEach((imageData, index) => {
             const base64Data = imageData.split(',')[1];
-            zip.file(`frame_${String(index + 1).padStart(3, '0')}.jpg`, base64Data, {base64: true});
+            zip.file(`frame_${String(index + 1).padStart(4, '0')}.png`, base64Data, {base64: true});
         });
+        
+        const infoText = `🎬 Animation Export Info
+========================
+📊 Frames: ${frameImages.length}
+⚡ Frame Rate: ${fps} FPS
+🎨 Quality: ${quality}
+⏱️ Duration: ${(frameImages.length / fps).toFixed(2)} seconds
+📐 Resolution: ${this.canvas.width}x${this.canvas.height}
+📅 Exported: ${new Date().toLocaleString()}
+
+💡 Usage Tips:
+- Import frames into video editing software
+- Use frame rate of ${fps} FPS for smooth playback
+- Frames are numbered sequentially for easy import`;
+        zip.file('README.txt', infoText);
         
         zip.generateAsync({type: 'blob'}).then(content => {
             const url = URL.createObjectURL(content);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `animation_jpeg_${this.playbackSpeed}fps.zip`;
+            link.download = `animation_${frameImages.length}frames_${fps}fps.zip`;
             link.click();
             URL.revokeObjectURL(url);
             
-            alert(`Exported ${frameImages.length} frames as JPEG sequence at ${this.playbackSpeed} FPS. Smaller file sizes with high quality!`);
+            alert(`✅ Image sequence exported successfully!\n\n📁 ${frameImages.length} PNG frames\n⚡ ${fps} FPS\n📐 ${this.canvas.width}x${this.canvas.height}\n\n💡 Import the ZIP file into your video editor to create the final animation.`);
         });
+    }
+    
+    exportVideoFile(quality = 'medium', fps = 24) {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width;
+        canvas.height = this.canvas.height;
+        const ctx = canvas.getContext('2d');
+        
+        const qualityMap = { high: 2500000, medium: 1500000, low: 800000 };
+        const bitrate = qualityMap[quality] || 1500000;
+        
+        const progress = this.showExportProgress('Video');
+        
+        try {
+            const mimeType = this.getSupportedMimeType();
+            const stream = canvas.captureStream(fps);
+            const recorder = new MediaRecorder(stream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: bitrate
+            });
+            
+            const chunks = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+            
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `animation_${this.frames.length}frames_${fps}fps.webm`;
+                link.click();
+                URL.revokeObjectURL(url);
+                
+                alert(`✅ Video exported successfully!\n\nFrames: ${this.frames.length}\nFPS: ${fps}\nFormat: WEBM`);
+            };
+            
+            recorder.start(100);
+            this.renderFramesForVideo(0, ctx, canvas, progress, fps, recorder);
+            
+        } catch (error) {
+            alert('❌ Video export failed. Try Image Sequence export instead.');
+            console.error(error);
+            progress.close();
+        }
+    }
+    
+    renderFramesForVideo(frameIndex, ctx, canvas, progress, fps, recorder) {
+        if (frameIndex >= this.frames.length) {
+            setTimeout(() => {
+                recorder.stop();
+                progress.close();
+            }, 1000);
+            return;
+        }
+        
+        const frame = this.frames[frameIndex];
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (this.backgroundEnabled && frame.backgroundColor) {
+            ctx.fillStyle = frame.backgroundColor;
+        } else {
+            ctx.fillStyle = 'white';
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (frame.objects) {
+            frame.objects.forEach(obj => {
+                if (obj.visible) {
+                    ctx.save();
+                    ctx.translate(obj.x, obj.y);
+                    ctx.rotate(obj.rotation);
+                    ctx.scale(obj.scaleX, obj.scaleY);
+                    this.drawObjectOnCanvas(obj, ctx);
+                    ctx.restore();
+                }
+            });
+        }
+        
+        progress.update(frameIndex + 1, this.frames.length);
+        
+        setTimeout(() => {
+            this.renderFramesForVideo(frameIndex + 1, ctx, canvas, progress, fps, recorder);
+        }, 1000 / fps);
+    }
+    
+    exportImageSequence(quality = 'medium', fps = 24) {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width;
+        canvas.height = this.canvas.height;
+        const ctx = canvas.getContext('2d');
+        
+        const qualityMap = { high: 0.95, medium: 0.85, low: 0.7 };
+        const jpegQuality = qualityMap[quality] || 0.85;
+        
+        const frameImages = [];
+        const progress = this.showExportProgress('Image Sequence');
+        
+        this.frames.forEach((frame, index) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (this.backgroundEnabled && frame.backgroundColor) {
+                ctx.fillStyle = frame.backgroundColor;
+            } else {
+                ctx.fillStyle = 'white';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (frame.objects) {
+                frame.objects.forEach(obj => {
+                    if (obj.visible) {
+                        ctx.save();
+                        ctx.translate(obj.x, obj.y);
+                        ctx.rotate(obj.rotation);
+                        ctx.scale(obj.scaleX, obj.scaleY);
+                        this.drawObjectOnCanvas(obj, ctx);
+                        ctx.restore();
+                    }
+                });
+            }
+            
+            frameImages.push(canvas.toDataURL('image/jpeg', jpegQuality));
+            progress.update(index + 1, this.frames.length);
+        });
+        
+        this.createImageSequenceZip(frameImages, fps, quality);
+        progress.close();
     }
 
     createWebMFromFrames(frameImages) {
@@ -3368,6 +3718,22 @@ class AnimationMaker {
             tabContent.classList.add('active');
         }
     }
+    
+    switchTheme(theme) {
+        // Remove active class from all theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add active class to clicked theme button
+        document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+        
+        // Apply theme to body
+        document.body.setAttribute('data-theme', theme);
+        
+        // Save theme preference
+        localStorage.setItem('animateStudioTheme', theme);
+    }
 
     createBone(x, y) {
         if (this.lastBone) {
@@ -3513,6 +3879,142 @@ class AnimationMaker {
         }
     }
 
+    drawPixelAwareLine(obj, w, h) {
+        this.ctx.beginPath();
+        if (this.drawingMode === 'pixel') {
+            const startX = Math.floor((obj.data.startX || -w/2) / this.pixelSize) * this.pixelSize;
+            const startY = Math.floor((obj.data.startY || -h/2) / this.pixelSize) * this.pixelSize;
+            const endX = Math.floor((obj.data.endX || w/2) / this.pixelSize) * this.pixelSize;
+            const endY = Math.floor((obj.data.endY || h/2) / this.pixelSize) * this.pixelSize;
+            this.ctx.moveTo(startX, startY);
+            this.ctx.lineTo(endX, endY);
+        } else {
+            this.ctx.moveTo(obj.data.startX || -w/2, obj.data.startY || -h/2);
+            this.ctx.lineTo(obj.data.endX || w/2, obj.data.endY || h/2);
+        }
+        this.ctx.stroke();
+    }
+    
+    drawPixelAwareCircle(obj, w, h) {
+        this.ctx.beginPath();
+        const radiusX = obj.data.radiusX || w/2;
+        const radiusY = obj.data.radiusY || h/2;
+        
+        if (this.drawingMode === 'pixel') {
+            const pixelRadiusX = Math.floor(radiusX / this.pixelSize) * this.pixelSize;
+            const pixelRadiusY = Math.floor(radiusY / this.pixelSize) * this.pixelSize;
+            this.ctx.save();
+            this.ctx.scale(pixelRadiusX / Math.max(pixelRadiusX, pixelRadiusY), pixelRadiusY / Math.max(pixelRadiusX, pixelRadiusY));
+            this.ctx.arc(0, 0, Math.max(pixelRadiusX, pixelRadiusY), 0, 2 * Math.PI);
+            this.ctx.restore();
+        } else {
+            this.ctx.save();
+            this.ctx.scale(radiusX / Math.max(radiusX, radiusY), radiusY / Math.max(radiusX, radiusY));
+            this.ctx.arc(0, 0, Math.max(radiusX, radiusY), 0, 2 * Math.PI);
+            this.ctx.restore();
+        }
+        
+        if (obj.data.fillColor) {
+            this.ctx.fillStyle = obj.data.fillColor;
+            this.ctx.fill();
+        }
+        this.ctx.stroke();
+    }
+    
+    drawPixelAwareSemicircle(obj, w, h) {
+        this.ctx.beginPath();
+        const semiRadiusX = obj.data.radiusX || w/2;
+        const semiRadiusY = obj.data.radiusY || h/2;
+        
+        if (this.drawingMode === 'pixel') {
+            const pixelRadiusX = Math.floor(semiRadiusX / this.pixelSize) * this.pixelSize;
+            const pixelRadiusY = Math.floor(semiRadiusY / this.pixelSize) * this.pixelSize;
+            this.ctx.save();
+            this.ctx.scale(pixelRadiusX / Math.max(pixelRadiusX, pixelRadiusY), pixelRadiusY / Math.max(pixelRadiusX, pixelRadiusY));
+            this.ctx.arc(0, 0, Math.max(pixelRadiusX, pixelRadiusY), 0, Math.PI);
+            this.ctx.restore();
+        } else {
+            this.ctx.save();
+            this.ctx.scale(semiRadiusX / Math.max(semiRadiusX, semiRadiusY), semiRadiusY / Math.max(semiRadiusX, semiRadiusY));
+            this.ctx.arc(0, 0, Math.max(semiRadiusX, semiRadiusY), 0, Math.PI);
+            this.ctx.restore();
+        }
+        
+        this.ctx.closePath();
+        if (obj.data.fillColor) {
+            this.ctx.fillStyle = obj.data.fillColor;
+            this.ctx.fill();
+        }
+        this.ctx.stroke();
+    }
+    
+    drawPixelAwareSquare(obj, w, h) {
+        this.ctx.beginPath();
+        if (this.drawingMode === 'pixel') {
+            const pixelW = Math.floor(w / this.pixelSize) * this.pixelSize;
+            const pixelH = Math.floor(h / this.pixelSize) * this.pixelSize;
+            this.ctx.rect(-pixelW/2, -pixelH/2, pixelW, pixelH);
+        } else {
+            this.ctx.rect(-w/2, -h/2, w, h);
+        }
+        
+        if (obj.data.fillColor) {
+            this.ctx.fillStyle = obj.data.fillColor;
+            this.ctx.fill();
+        }
+        this.ctx.stroke();
+    }
+    
+    drawPixelAwareTriangle(obj, w, h) {
+        this.ctx.beginPath();
+        if (this.drawingMode === 'pixel') {
+            const pixelW = Math.floor(w / this.pixelSize) * this.pixelSize;
+            const pixelH = Math.floor(h / this.pixelSize) * this.pixelSize;
+            this.ctx.moveTo(0, -pixelH/2);
+            this.ctx.lineTo(-pixelW/2, pixelH/2);
+            this.ctx.lineTo(pixelW/2, pixelH/2);
+        } else {
+            this.ctx.moveTo(0, -h/2);
+            this.ctx.lineTo(-w/2, h/2);
+            this.ctx.lineTo(w/2, h/2);
+        }
+        
+        this.ctx.closePath();
+        if (obj.data.fillColor) {
+            this.ctx.fillStyle = obj.data.fillColor;
+            this.ctx.fill();
+        }
+        this.ctx.stroke();
+    }
+    
+    drawPixelAwareStar(obj, w, h) {
+        const starRadiusX = obj.data.radiusX || w/2;
+        const starRadiusY = obj.data.radiusY || h/2;
+        
+        this.ctx.save();
+        if (this.drawingMode === 'pixel') {
+            const pixelRadiusX = Math.floor(starRadiusX / this.pixelSize) * this.pixelSize;
+            const pixelRadiusY = Math.floor(starRadiusY / this.pixelSize) * this.pixelSize;
+            this.ctx.scale(pixelRadiusX / Math.max(pixelRadiusX, pixelRadiusY), pixelRadiusY / Math.max(pixelRadiusX, pixelRadiusY));
+            const maxRadius = Math.max(pixelRadiusX, pixelRadiusY);
+            this.drawStar(0, 0, 5, maxRadius, maxRadius * 0.4, obj.data.fillColor);
+        } else {
+            this.ctx.scale(starRadiusX / Math.max(starRadiusX, starRadiusY), starRadiusY / Math.max(starRadiusX, starRadiusY));
+            const maxRadius = Math.max(starRadiusX, starRadiusY);
+            this.drawStar(0, 0, 5, maxRadius, maxRadius * 0.4, obj.data.fillColor);
+        }
+        this.ctx.restore();
+    }
+    
+    drawPixelAwareArrow(obj, w, h) {
+        if (this.drawingMode === 'pixel') {
+            const pixelW = Math.floor(w / this.pixelSize) * this.pixelSize;
+            this.drawArrow(-pixelW/2, 0, pixelW/2, 0, obj.data.fillColor);
+        } else {
+            this.drawArrow(-w/2, 0, w/2, 0, obj.data.fillColor);
+        }
+    }
+
     distanceToLineSegment(px, py, x1, y1, x2, y2) {
         const A = px - x1;
         const B = py - y1;
@@ -3551,6 +4053,198 @@ class AnimationMaker {
         contextMenu.style.left = e.clientX + 'px';
         contextMenu.style.top = e.clientY + 'px';
         contextMenu.style.display = 'block';
+    }
+
+    handleTouchStart(e) {
+        if (e.touches.length === 3) {
+            // Three finger touch - prepare for pan/zoom
+            this.touchStartDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            this.touchStartCenter = this.getTouchCenter(e.touches[0], e.touches[1]);
+            this.touchStartPan = { x: this.panOffset.x, y: this.panOffset.y };
+            this.touchStartZoom = this.zoom;
+            e.preventDefault();
+        }
+    }
+
+    handleTouchMove(e) {
+        if (e.touches.length === 3) {
+            e.preventDefault();
+            
+            const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            const currentCenter = this.getTouchCenter(e.touches[0], e.touches[1]);
+            
+            // Zoom based on distance change
+            const zoomFactor = currentDistance / this.touchStartDistance;
+            this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, this.touchStartZoom * zoomFactor));
+            
+            // Pan based on center movement
+            const deltaX = currentCenter.x - this.touchStartCenter.x;
+            const deltaY = currentCenter.y - this.touchStartCenter.y;
+            this.panOffset.x = this.touchStartPan.x + deltaX;
+            this.panOffset.y = this.touchStartPan.y + deltaY;
+            
+            this.applyZoom();
+            this.updateZoomDisplay();
+        }
+    }
+
+    handleTouchEnd(e) {
+        if (e.touches.length < 3) {
+            this.touchStartDistance = null;
+            this.touchStartCenter = null;
+            this.touchStartPan = null;
+            this.touchStartZoom = null;
+        }
+    }
+
+    getTouchDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    getTouchCenter(touch1, touch2) {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+    }
+
+    performFloodFill(x, y, fillColor) {
+        // Find the clicked object
+        const clickedObject = this.findObjectAtPosition(x, y);
+        
+        if (clickedObject) {
+            // Handle different shape types
+            if (clickedObject.type === 'path' && clickedObject.data.points) {
+                // Check if path is closed
+                const points = clickedObject.data.points;
+                const firstPoint = points[0];
+                const lastPoint = points[points.length - 1];
+                const distance = Math.sqrt(Math.pow(lastPoint.x - firstPoint.x, 2) + Math.pow(lastPoint.y - firstPoint.y, 2));
+                const isClosed = distance < 20 || clickedObject.data.closed;
+                
+                if (isClosed) {
+                    clickedObject.data.fillColor = fillColor;
+                    clickedObject.data.closed = true;
+                    this.redrawCanvas();
+                    return;
+                }
+            } else if (['circle', 'semicircle', 'square', 'triangle', 'star'].includes(clickedObject.type)) {
+                // Fill geometric shapes
+                clickedObject.data.fillColor = fillColor;
+                this.redrawCanvas();
+                return;
+            }
+        }
+        
+        // Fallback: traditional flood fill on canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width;
+        canvas.height = this.canvas.height;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw current frame to temp canvas
+        this.drawFrameObjects({ objects: this.frames[this.currentFrame].objects }, ctx);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const targetColor = this.getPixelColor(data, Math.floor(x), Math.floor(y), canvas.width);
+        const fillColorRgb = this.hexToRgb(fillColor);
+        
+        if (!fillColorRgb || this.colorsMatch(targetColor, fillColorRgb)) return;
+        
+        const stack = [{ x: Math.floor(x), y: Math.floor(y) }];
+        const visited = new Set();
+        
+        while (stack.length > 0) {
+            const { x: px, y: py } = stack.pop();
+            
+            if (px < 0 || px >= canvas.width || py < 0 || py >= canvas.height) continue;
+            const key = `${px},${py}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            
+            const currentColor = this.getPixelColor(data, px, py, canvas.width);
+            if (!this.colorsMatch(currentColor, targetColor)) continue;
+            
+            this.setPixelColor(data, px, py, canvas.width, fillColorRgb);
+            
+            stack.push({ x: px + 1, y: py });
+            stack.push({ x: px - 1, y: py });
+            stack.push({ x: px, y: py + 1 });
+            stack.push({ x: px, y: py - 1 });
+        }
+        
+        // Create filled area as new object
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+        
+        this.createObject('flood-fill', {
+            image: tempCanvas,
+            width: canvas.width,
+            height: canvas.height,
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            fillColor: fillColor
+        });
+        
+        this.updateObjectsList();
+        this.redrawCanvas();
+    }
+
+    getPixelColor(data, x, y, width) {
+        x = Math.floor(Math.max(0, Math.min(x, width - 1)));
+        y = Math.floor(Math.max(0, Math.min(y, (data.length / 4) / width - 1)));
+        const index = (y * width + x) * 4;
+        
+        if (index < 0 || index >= data.length - 3) {
+            return { r: 0, g: 0, b: 0, a: 0 };
+        }
+        
+        return {
+            r: data[index] || 0,
+            g: data[index + 1] || 0,
+            b: data[index + 2] || 0,
+            a: data[index + 3] || 0
+        };
+    }
+
+    setPixelColor(data, x, y, width, color) {
+        x = Math.floor(Math.max(0, Math.min(x, width - 1)));
+        y = Math.floor(Math.max(0, Math.min(y, (data.length / 4) / width - 1)));
+        const index = (y * width + x) * 4;
+        
+        if (index < 0 || index >= data.length - 3) return;
+        
+        data[index] = color.r || 0;
+        data[index + 1] = color.g || 0;
+        data[index + 2] = color.b || 0;
+        data[index + 3] = 255;
+    }
+
+    hexToRgb(hex) {
+        if (!hex) return null;
+        hex = hex.replace('#', '');
+        if (hex.length === 3) {
+            hex = hex.split('').map(char => char + char).join('');
+        }
+        const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
+    colorsMatch(color1, color2) {
+        if (!color1 || !color2) return false;
+        return Math.abs(color1.r - color2.r) <= 1 && 
+               Math.abs(color1.g - color2.g) <= 1 && 
+               Math.abs(color1.b - color2.b) <= 1;
     }
 
     handleKeyboard(event) {
@@ -3613,15 +4307,330 @@ class AnimationMaker {
             }
         }
     }
+    
+    setupDeviceSupport() {
+        this.deviceType = this.detectDevice();
+        this.isTouchDevice = 'ontouchstart' in window;
+        
+        document.body.setAttribute('data-device', this.deviceType);
+        if (this.isTouchDevice) document.body.classList.add('touch-device');
+        
+        if (this.deviceType === 'tablet') {
+            this.setupTabletSupport();
+        }
+    }
+    
+    detectDevice() {
+        const ua = navigator.userAgent.toLowerCase();
+        const w = window.screen.width;
+        const h = window.screen.height;
+        const max = Math.max(w, h);
+        const min = Math.min(w, h);
+        
+        if (/ipad/.test(ua) || (/android/.test(ua) && !/mobile/.test(ua)) || (min >= 768 && max >= 1024 && 'ontouchstart' in window)) {
+            return 'tablet';
+        }
+        if (/mobile/.test(ua) || min < 768) {
+            return 'mobile';
+        }
+        return 'desktop';
+    }
+    
+    setupTabletSupport() {
+        this.resetZoomToFit();
+        
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                this.handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+            }
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && this.isDrawing) {
+                const touch = e.touches[0];
+                this.handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+            }
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 0) {
+                this.handleMouseUp({ clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY });
+            }
+        }, { passive: false });
+        
+        document.documentElement.style.setProperty('--touch-size', '48px');
+    }
+    
+    applyDisplayMode(mode) {
+        const body = document.body;
+        body.removeAttribute('data-theme');
+        
+        if (mode === 'auto') {
+            const hour = new Date().getHours();
+            const isDay = hour >= 6 && hour < 18;
+            mode = isDay ? 'light' : 'dark';
+        }
+        
+        if (mode !== 'light') {
+            body.setAttribute('data-theme', mode);
+        }
+        
+        localStorage.setItem('displayMode', mode);
+    }
+}
+
+// Loading Screen Manager
+class LoadingScreen {
+    constructor() {
+        this.loadingScreen = document.getElementById('loadingScreen');
+        this.progressBar = document.getElementById('loadingProgressBar');
+        this.statusText = document.getElementById('loadingStatus');
+        this.particlesContainer = document.getElementById('loadingParticles');
+        this.progress = 0;
+        this.loadingSteps = [
+            '🎨 Initializing Canvas...',
+            '🖌️ Loading Drawing Tools...',
+            '🎬 Setting up Animation System...',
+            '✨ Preparing Effects Engine...',
+            '🎯 Loading User Interface...',
+            '⚡ Finalizing Setup...'
+        ];
+        this.currentStep = 0;
+        
+        this.createParticles();
+        this.startLoading();
+    }
+    
+    createParticles() {
+        for (let i = 0; i < 80; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 4 + 's';
+            particle.style.animationDuration = (3 + Math.random() * 2) + 's';
+            
+            // Add different particle sizes and colors
+            const size = Math.random() * 3 + 2;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            
+            const colors = ['#ffffff', '#f093fb', '#a8edea', '#fed6e3'];
+            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            
+            this.particlesContainer.appendChild(particle);
+        }
+    }
+    
+    startLoading() {
+        // Add loading sound effect simulation
+        this.addLoadingSounds();
+        
+        const loadingInterval = setInterval(() => {
+            this.progress += Math.random() * 12 + 8;
+            
+            if (this.progress >= 100) {
+                this.progress = 100;
+                clearInterval(loadingInterval);
+                this.statusText.textContent = '🎉 Ready to Create Amazing Animations!';
+                this.statusText.style.fontSize = '16px';
+                this.statusText.style.fontWeight = 'bold';
+                this.statusText.style.color = '#fff';
+                this.statusText.style.textShadow = '0 0 20px rgba(255,255,255,0.8)';
+                
+                // Add completion effect
+                this.addCompletionEffect();
+                
+                setTimeout(() => {
+                    this.hideLoadingScreen();
+                }, 1200);
+            } else {
+                this.updateProgress();
+            }
+        }, 400 + Math.random() * 300);
+    }
+    
+    addLoadingSounds() {
+        // Simulate loading sounds with visual feedback
+        const soundEffects = ['⚡', '✨', '🔧', '🎨', '🎬', '🚀'];
+        let soundIndex = 0;
+        
+        const soundInterval = setInterval(() => {
+            if (this.progress >= 100) {
+                clearInterval(soundInterval);
+                return;
+            }
+            
+            const soundEffect = document.createElement('div');
+            soundEffect.textContent = soundEffects[soundIndex % soundEffects.length];
+            soundEffect.style.cssText = `
+                position: absolute;
+                font-size: 2em;
+                color: white;
+                animation: soundPop 1s ease-out forwards;
+                pointer-events: none;
+                left: ${20 + Math.random() * 60}%;
+                top: ${20 + Math.random() * 60}%;
+            `;
+            
+            this.loadingScreen.appendChild(soundEffect);
+            
+            setTimeout(() => {
+                if (soundEffect.parentNode) {
+                    soundEffect.parentNode.removeChild(soundEffect);
+                }
+            }, 1000);
+            
+            soundIndex++;
+        }, 800);
+    }
+    
+    addCompletionEffect() {
+        // Create burst effect
+        for (let i = 0; i < 20; i++) {
+            const burst = document.createElement('div');
+            burst.style.cssText = `
+                position: absolute;
+                width: 6px;
+                height: 6px;
+                background: #fff;
+                border-radius: 50%;
+                left: 50%;
+                top: 50%;
+                animation: burstOut 1s ease-out forwards;
+                animation-delay: ${i * 0.05}s;
+                transform-origin: center;
+            `;
+            
+            const angle = (i / 20) * Math.PI * 2;
+            burst.style.setProperty('--angle', angle + 'rad');
+            
+            this.loadingScreen.appendChild(burst);
+            
+            setTimeout(() => {
+                if (burst.parentNode) {
+                    burst.parentNode.removeChild(burst);
+                }
+            }, 1000);
+        }
+    }
+    
+    updateProgress() {
+        this.progressBar.style.width = this.progress + '%';
+        
+        const stepIndex = Math.floor((this.progress / 100) * this.loadingSteps.length);
+        if (stepIndex < this.loadingSteps.length && stepIndex !== this.currentStep) {
+            this.currentStep = stepIndex;
+            this.statusText.textContent = this.loadingSteps[stepIndex];
+        }
+    }
+    
+    hideLoadingScreen() {
+        this.loadingScreen.classList.add('hidden');
+        
+        setTimeout(() => {
+            this.loadingScreen.style.display = 'none';
+            // Initialize the main application after loading screen
+            this.initializeApp();
+        }, 800);
+    }
+    
+    initializeApp() {
+        animationMaker = new AnimationMaker();
+        
+        // Update slider display values
+        document.getElementById('brushSizeValue').textContent = animationMaker.brushSize;
+        document.getElementById('opacityValue').textContent = Math.round(animationMaker.opacity * 100);
+        document.getElementById('fontSizeValue').textContent = animationMaker.fontSize;
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('animateStudioTheme') || 'light';
+        animationMaker.switchTheme(savedTheme);
+        
+        // Add welcome animation
+        this.addWelcomeAnimation();
+    }
+    
+    addWelcomeAnimation() {
+        const mainContainer = document.querySelector('.main-container');
+        const topMenu = document.querySelector('.top-menu');
+        const animationBar = document.querySelector('.animation-timeline-bar');
+        
+        // Animate main container
+        mainContainer.style.opacity = '0';
+        mainContainer.style.transform = 'translateY(30px)';
+        
+        topMenu.style.opacity = '0';
+        topMenu.style.transform = 'translateY(-30px)';
+        
+        if (animationBar) {
+            animationBar.style.opacity = '0';
+            animationBar.style.transform = 'translateY(30px)';
+        }
+        
+        // Staggered animation entrance
+        setTimeout(() => {
+            topMenu.style.transition = 'all 1s cubic-bezier(0.4, 0, 0.2, 1)';
+            topMenu.style.opacity = '1';
+            topMenu.style.transform = 'translateY(0)';
+            
+            setTimeout(() => {
+                mainContainer.style.transition = 'all 1s cubic-bezier(0.4, 0, 0.2, 1)';
+                mainContainer.style.opacity = '1';
+                mainContainer.style.transform = 'translateY(0)';
+                
+                setTimeout(() => {
+                    if (animationBar) {
+                        animationBar.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                        animationBar.style.opacity = '1';
+                        animationBar.style.transform = 'translateY(0)';
+                    }
+                }, 300);
+            }, 300);
+        }, 200);
+        
+        // Add sparkle effect to canvas
+        setTimeout(() => {
+            this.addCanvasSparkle();
+        }, 1500);
+    }
+    
+    addCanvasSparkle() {
+        const canvas = document.getElementById('mainCanvas');
+        if (!canvas) return;
+        
+        for (let i = 0; i < 10; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.innerHTML = '✨';
+            sparkle.style.cssText = `
+                position: absolute;
+                font-size: 1.5em;
+                pointer-events: none;
+                animation: sparkleFloat 2s ease-out forwards;
+                left: ${Math.random() * 80 + 10}%;
+                top: ${Math.random() * 80 + 10}%;
+                z-index: 1000;
+            `;
+            
+            canvas.parentNode.appendChild(sparkle);
+            
+            setTimeout(() => {
+                if (sparkle.parentNode) {
+                    sparkle.parentNode.removeChild(sparkle);
+                }
+            }, 2000);
+        }
+    }
 }
 
 // Initialize the application
 let animationMaker;
+let loadingScreen;
+
 document.addEventListener('DOMContentLoaded', function () {
-    animationMaker = new AnimationMaker();
-    
-    // Update slider display values
-    document.getElementById('brushSizeValue').textContent = animationMaker.brushSize;
-    document.getElementById('opacityValue').textContent = Math.round(animationMaker.opacity * 100);
-    document.getElementById('fontSizeValue').textContent = animationMaker.fontSize;
+    // Start with loading screen
+    loadingScreen = new LoadingScreen();
 });

@@ -1,0 +1,310 @@
+/* STUNNING GUI EFFECTS & ANIMATIONS */
+
+/* Animated Background */
+body {
+    background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Glowing Neon Effects */
+.top-menu {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.menu-brand {
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff;
+    animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes neonPulse {
+    from { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
+    to { text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #ff00ff; }
+}
+
+/* Holographic Buttons */
+.menu-btn, .tool-btn, .action-btn {
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(0, 255, 255, 0.1));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.menu-btn::before, .tool-btn::before, .action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+}
+
+.menu-btn:hover::before, .tool-btn:hover::before, .action-btn:hover::before {
+    left: 100%;
+}
+
+.menu-btn:hover, .tool-btn:hover, .action-btn:hover {
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 20px rgba(0, 255, 255, 0.1);
+    transform: translateY(-2px);
+    border-color: #00ffff;
+}
+
+/* Floating Particles */
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: #00ffff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #00ffff;
+    animation: floatUp 8s linear infinite;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% {
+        transform: translateY(-10px) translateX(100px);
+        opacity: 0;
+    }
+}
+
+/* Glowing Sidebars */
+.sidebar {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+/* Neon Tab Effects */
+.tab-btn.active {
+    background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 255, 0.2));
+    border-bottom: 3px solid #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+}
+
+/* Holographic Canvas */
+.canvas-wrapper {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.4), inset 0 0 30px rgba(0, 255, 255, 0.1);
+    position: relative;
+}
+
+.canvas-wrapper::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+    z-index: -1;
+    border-radius: inherit;
+    animation: borderGlow 3s linear infinite;
+}
+
+@keyframes borderGlow {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+/* Cyberpunk Timeline */
+.animation-timeline-bar {
+    background: rgba(0, 0, 0, 0.9);
+    border-top: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 1px 0 rgba(0, 255, 255, 0.2);
+}
+
+/* Glowing Frame Items */
+.frame-item {
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease;
+}
+
+.frame-item:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+    transform: scale(1.05);
+}
+
+/* Pulsing Active Elements */
+.tool-btn.active {
+    animation: activePulse 2s ease-in-out infinite;
+}
+
+@keyframes activePulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.8), 0 0 35px rgba(255, 0, 255, 0.4);
+    }
+}
+
+/* Matrix Rain Effect */
+.matrix-rain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.1;
+}
+
+.matrix-char {
+    position: absolute;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    animation: matrixFall 3s linear infinite;
+}
+
+@keyframes matrixFall {
+    0% {
+        transform: translateY(-100px);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh);
+        opacity: 0;
+    }
+}
+
+/* Holographic Text */
+.holographic-text {
+    background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: holographicShift 3s ease-in-out infinite;
+}
+
+@keyframes holographicShift {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(180deg); }
+}
+
+/* Glitch Effect */
+.glitch {
+    position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch::before {
+    animation: glitch-1 0.5s infinite;
+    color: #ff00ff;
+    z-index: -1;
+}
+
+.glitch::after {
+    animation: glitch-2 0.5s infinite;
+    color: #00ffff;
+    z-index: -2;
+}
+
+@keyframes glitch-1 {
+    0%, 14%, 15%, 49%, 50%, 99%, 100% {
+        transform: translate(0);
+    }
+    15%, 49% {
+        transform: translate(-2px, 2px);
+    }
+}
+
+@keyframes glitch-2 {
+    0%, 20%, 21%, 62%, 63%, 99%, 100% {
+        transform: translate(0);
+    }
+    21%, 62% {
+        transform: translate(2px, -2px);
+    }
+}
+
+/* Energy Orbs */
+.energy-orb {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, transparent 70%);
+    animation: orbFloat 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes orbFloat {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: translate(20px, -20px) scale(1.2);
+        opacity: 1;
+    }
+}
+
+/* Scan Lines */
+.scan-lines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 255, 0.03) 2px,
+        rgba(0, 255, 255, 0.03) 4px
+    );
+    animation: scanMove 0.1s linear infinite;
+}
+
+@keyframes scanMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+}

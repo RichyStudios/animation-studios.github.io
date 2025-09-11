@@ -563,16 +563,37 @@ class AnimationMaker {
     }
 
     copyFrame() {
-        if (this.frames[this.currentFrame]) {
-            this.clipboard = this.frames[this.currentFrame].map(layerData => {
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.canvas.width;
-                tempCanvas.height = this.canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.putImageData(layerData, 0, 0);
-                return tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            });
-        }
+        // Save current canvas state to current layer first
+        this.updateCurrentFrame();
+        
+        // Create deep copy of all layers in current frame
+        const copiedLayers = this.frames[this.currentFrame].map(layerData => {
+            const newImageData = this.ctx.createImageData(layerData.width, layerData.height);
+            newImageData.data.set(layerData.data);
+            return newImageData;
+        });
+        
+        // Copy layer settings
+        const copiedSettings = this.layerSettings[this.currentFrame].map(setting => ({
+            name: setting.name,
+            visible: setting.visible,
+            opacity: setting.opacity
+        }));
+        
+        // Add new frame with copied data
+        this.frames.push(copiedLayers);
+        this.layerSettings.push(copiedSettings);
+        
+        // Switch to new frame
+        this.currentFrame = this.frames.length - 1;
+        this.currentLayer = 0;
+        
+        // Update UI
+        this.updateLayersList();
+        this.updateFramesTimeline();
+        this.updateFrameDisplay();
+        this.redrawCanvas();
+        this.saveState();
     }
 
     pasteFrame() {
