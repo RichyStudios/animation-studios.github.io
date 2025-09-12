@@ -7,8 +7,35 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="layers-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700&family=Raleway:wght@300;400;500;600;700&family=Ubuntu:wght@300;400;500;700&family=Playfair+Display:wght@400;500;600;700&family=Merriweather:wght@300;400;700&family=Oswald:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=PT+Sans:wght@400;700&family=Noto+Sans:wght@300;400;500;600;700&family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* Font Face Declarations */
+        @font-face {
+            font-family: 'Gallaudet';
+            src: local('Noto Sans'), local('Arial'), local('Helvetica');
+            font-display: swap;
+        }
+        
+        /* Ensure all fonts have proper fallbacks */
+        .font-roboto { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-opensans { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-lato { font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-montserrat { font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-poppins { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-nunito { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-raleway { font-family: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-ubuntu { font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-playfair { font-family: 'Playfair Display', Georgia, serif; }
+        .font-merriweather { font-family: 'Merriweather', Georgia, serif; }
+        .font-oswald { font-family: 'Oswald', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-sourcesans { font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-firasans { font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-ptsans { font-family: 'PT Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-notosans { font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-oxygen { font-family: 'Oxygen', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .font-gallaudet { font-family: 'Gallaudet', 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
     <style>
         /* Responsive Design & Touch Support */
         @media (max-width: 1200px) {
@@ -53,20 +80,31 @@
         
         /* Tablet Canvas Optimization */
         [data-device="tablet"] .canvas-container {
+            position: fixed !important;
+            top: 60px !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 250px !important;
             padding: 10px !important;
             margin: 0 !important;
-            width: 100% !important;
-            height: 60vh !important;
+            width: 100vw !important;
+            height: calc(100vh - 310px) !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            overflow: hidden !important;
+            z-index: 1 !important;
         }
         
         [data-device="tablet"] .canvas-container-inner {
-            max-width: 95% !important;
-            max-height: 95% !important;
+            max-width: calc(100vw - 20px) !important;
+            max-height: calc(100vh - 330px) !important;
             width: auto !important;
             height: auto !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            position: relative !important;
         }
         
         [data-device="tablet"] #mainCanvas,
@@ -76,11 +114,13 @@
             width: auto !important;
             height: auto !important;
             border-radius: 8px !important;
+            object-fit: contain !important;
         }
         
         [data-device="tablet"] .main-container {
             flex-direction: column !important;
             height: 100vh !important;
+            overflow: hidden !important;
         }
         
         [data-device="tablet"] .left-sidebar {
@@ -252,6 +292,12 @@
         /* Show tablet bottom tabs only on tablets */
         [data-device="tablet"] #tabletBottomTabs {
             display: block !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 250px !important;
+            z-index: 1000 !important;
         }
         
         [data-device="tablet"] .animation-timeline-bar {
@@ -316,7 +362,7 @@
         }
         
         .tablet-content-area {
-            max-height: 200px;
+            max-height: 180px;
             overflow-y: auto;
             padding: 15px;
         }
@@ -1021,6 +1067,9 @@
                 <i class="fas fa-coffee"></i>
                 <span>Support</span>
             </button>
+            <button class="menu-btn icon-only" id="helpBtn" data-tooltip="Help & Tutorial - Learn how to use Animate Studio" aria-label="Help & Tutorial">
+                <i class="fas fa-question-circle"></i>
+            </button>
             <button class="menu-btn icon-only" id="aboutBtn" data-tooltip="About Animate Studio - Version and credits" aria-label="About Animate Studio - Version and credits">
                 <i class="fas fa-info-circle"></i>
             </button>
@@ -1162,11 +1211,51 @@
                 <div class="setting-group">
                     <label>Font Family:</label>
                     <select id="fontFamily" class="modern-select">
-                        <option value="Inter">Inter</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Courier New">Courier New</option>
-                        <option value="Helvetica">Helvetica</option>
+                        <option value="'Inter', -apple-system, BlinkMacSystemFont, sans-serif">Inter</option>
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                        <option value="'Courier New', Courier, monospace">Courier New</option>
+                        <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+                        <option value="'Gallaudet', 'Noto Sans', Arial, sans-serif">Gallaudet TrueType</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                        <option value="Tahoma, sans-serif">Tahoma</option>
+                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                        <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                        <option value="Impact, sans-serif">Impact</option>
+                        <option value="'Lucida Console', monospace">Lucida Console</option>
+                        <option value="Palatino, serif">Palatino</option>
+                        <option value="Garamond, serif">Garamond</option>
+                        <option value="Bookman, serif">Bookman</option>
+                        <option value="'Avant Garde', sans-serif">Avant Garde</option>
+                        <option value="'Century Gothic', sans-serif">Century Gothic</option>
+                        <option value="'Franklin Gothic Medium', sans-serif">Franklin Gothic</option>
+                        <option value="'Gill Sans', sans-serif">Gill Sans</option>
+                        <option value="'Lucida Sans', sans-serif">Lucida Sans</option>
+                        <option value="Optima, sans-serif">Optima</option>
+                        <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                        <option value="Calibri, sans-serif">Calibri</option>
+                        <option value="Cambria, serif">Cambria</option>
+                        <option value="Consolas, monospace">Consolas</option>
+                        <option value="Monaco, monospace">Monaco</option>
+                        <option value="Menlo, monospace">Menlo</option>
+                        <option value="'Source Code Pro', monospace">Source Code Pro</option>
+                        <option value="'Roboto', -apple-system, sans-serif">Roboto</option>
+                        <option value="'Open Sans', -apple-system, sans-serif">Open Sans</option>
+                        <option value="'Lato', -apple-system, sans-serif">Lato</option>
+                        <option value="'Montserrat', -apple-system, sans-serif">Montserrat</option>
+                        <option value="'Poppins', -apple-system, sans-serif">Poppins</option>
+                        <option value="'Nunito', -apple-system, sans-serif">Nunito</option>
+                        <option value="'Raleway', -apple-system, sans-serif">Raleway</option>
+                        <option value="'Ubuntu', -apple-system, sans-serif">Ubuntu</option>
+                        <option value="'Playfair Display', Georgia, serif">Playfair Display</option>
+                        <option value="'Merriweather', Georgia, serif">Merriweather</option>
+                        <option value="'Oswald', -apple-system, sans-serif">Oswald</option>
+                        <option value="'Source Sans Pro', -apple-system, sans-serif">Source Sans Pro</option>
+                        <option value="'Fira Sans', -apple-system, sans-serif">Fira Sans</option>
+                        <option value="'PT Sans', -apple-system, sans-serif">PT Sans</option>
+                        <option value="'Noto Sans', -apple-system, sans-serif">Noto Sans</option>
+                        <option value="'Oxygen', -apple-system, sans-serif">Oxygen</option>
                     </select>
                 </div>
             </div>
@@ -1775,9 +1864,9 @@
     <!-- Tablet Bottom Navigation -->
     <div id="tabletBottomTabs">
         <div class="tablet-nav-tabs">
-            <button class="bottom-tab-btn active" data-tab="drawing">
-                <i class="fas fa-paint-brush"></i>
-                <span>Draw</span>
+            <button class="bottom-tab-btn active" data-tab="tools">
+                <i class="fas fa-tools"></i>
+                <span>Tools</span>
             </button>
             <button class="bottom-tab-btn" data-tab="frames">
                 <i class="fas fa-film"></i>
@@ -1787,54 +1876,38 @@
                 <i class="fas fa-layer-group"></i>
                 <span>Layers</span>
             </button>
-            <button class="bottom-tab-btn" data-tab="settings">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
+            <button class="bottom-tab-btn" data-tab="export">
+                <i class="fas fa-download"></i>
+                <span>Export</span>
             </button>
         </div>
         
         <div class="tablet-content-area">
-            <!-- Drawing Tools Tab -->
-            <div id="bottom-drawing-tab" class="bottom-tab-content active">
+            <!-- Tools Tab -->
+            <div id="bottom-tools-tab" class="bottom-tab-content active">
                 <div class="tablet-tool-grid">
-                    <button class="tablet-tool-btn active" data-tool="move">
-                        <i class="fas fa-arrows-alt"></i>
-                        <span>Move</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="pencil">
-                        <i class="fas fa-pencil-alt"></i>
-                        <span>Pencil</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="line">
-                        <i class="fas fa-minus"></i>
-                        <span>Line</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="circle">
-                        <i class="far fa-circle"></i>
-                        <span>Circle</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="square">
-                        <i class="far fa-square"></i>
-                        <span>Square</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="triangle">
-                        <i class="fas fa-play"></i>
-                        <span>Triangle</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="text">
-                        <i class="fas fa-font"></i>
-                        <span>Text</span>
-                    </button>
-                    <button class="tablet-tool-btn" data-tool="eraser">
-                        <i class="fas fa-eraser"></i>
-                        <span>Eraser</span>
-                    </button>
+                    <button class="tablet-tool-btn active" data-tool="move"><i class="fas fa-arrows-alt"></i><span>Move</span></button>
+                    <button class="tablet-tool-btn" data-tool="pencil"><i class="fas fa-pencil-alt"></i><span>Pencil</span></button>
+                    <button class="tablet-tool-btn" data-tool="line"><i class="fas fa-minus"></i><span>Line</span></button>
+                    <button class="tablet-tool-btn" data-tool="circle"><i class="far fa-circle"></i><span>Circle</span></button>
+                    <button class="tablet-tool-btn" data-tool="semicircle"><i class="fas fa-adjust"></i><span>Semi</span></button>
+                    <button class="tablet-tool-btn" data-tool="square"><i class="far fa-square"></i><span>Square</span></button>
+                    <button class="tablet-tool-btn" data-tool="triangle"><i class="fas fa-play"></i><span>Triangle</span></button>
+                    <button class="tablet-tool-btn" data-tool="star"><i class="fas fa-star"></i><span>Star</span></button>
+                    <button class="tablet-tool-btn" data-tool="arrow"><i class="fas fa-location-arrow"></i><span>Arrow</span></button>
+                    <button class="tablet-tool-btn" data-tool="text"><i class="fas fa-font"></i><span>Text</span></button>
+                    <button class="tablet-tool-btn" data-tool="eraser"><i class="fas fa-eraser"></i><span>Eraser</span></button>
+                    <button class="tablet-tool-btn" data-tool="flood-fill"><i class="fas fa-fill-drip"></i><span>Fill</span></button>
                 </div>
                 
                 <div class="tablet-controls">
                     <div class="tablet-control-group">
-                        <label>Color</label>
+                        <label>Primary Color</label>
                         <input type="color" id="tabletPrimaryColor" value="#4f46e5">
+                    </div>
+                    <div class="tablet-control-group">
+                        <label>Secondary Color</label>
+                        <input type="color" id="tabletSecondaryColor" value="#ffffff">
                     </div>
                     <div class="tablet-control-group">
                         <label>Size: <span id="tabletBrushSizeValue">5</span></label>
@@ -1844,72 +1917,61 @@
                         <label>Opacity: <span id="tabletOpacityValue">100</span>%</label>
                         <input type="range" id="tabletOpacity" min="10" max="100" value="100">
                     </div>
+                    <div class="tablet-control-group">
+                        <label>Font Size: <span id="tabletFontSizeValue">24</span></label>
+                        <input type="range" id="tabletFontSize" min="10" max="100" value="24">
+                    </div>
+                    <div class="tablet-control-group">
+                        <label>Font Family</label>
+                        <select id="tabletFontFamily">
+                            <option value="'Inter', sans-serif">Inter</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="'Open Sans', sans-serif">Open Sans</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             
             <!-- Frames Tab -->
             <div id="bottom-frames-tab" class="bottom-tab-content">
                 <div class="tablet-frame-controls">
-                    <button class="tablet-frame-btn" id="tabletAddFrameBtn">
-                        <i class="fas fa-plus"></i>
-                        Add Frame
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletCopyFrameBtn">
-                        <i class="fas fa-copy"></i>
-                        Copy Frame
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletRemoveFrameBtn">
-                        <i class="fas fa-trash"></i>
-                        Remove
-                    </button>
+                    <button class="tablet-frame-btn" id="tabletAddFrameBtn"><i class="fas fa-plus"></i>Add</button>
+                    <button class="tablet-frame-btn" id="tabletCopyFrameBtn"><i class="fas fa-copy"></i>Copy</button>
+                    <button class="tablet-frame-btn" id="tabletRemoveFrameBtn"><i class="fas fa-trash"></i>Remove</button>
+                    <button class="tablet-frame-btn" id="tabletPrevFrameBtn"><i class="fas fa-step-backward"></i>Prev</button>
+                    <button class="tablet-frame-btn" id="tabletNextFrameBtn"><i class="fas fa-step-forward"></i>Next</button>
                 </div>
                 
                 <div class="tablet-playback-controls">
-                    <button class="tablet-nav-btn" id="tabletPrevFrameBtn">
-                        <i class="fas fa-step-backward"></i>
-                    </button>
-                    <button class="tablet-play-btn" id="tabletPlayBtn">
-                        <i class="fas fa-play"></i>
-                        Play
-                    </button>
-                    <button class="tablet-nav-btn" id="tabletNextFrameBtn">
-                        <i class="fas fa-step-forward"></i>
-                    </button>
+                    <button class="tablet-play-btn" id="tabletPlayBtn"><i class="fas fa-play"></i>Play</button>
+                    <button class="tablet-nav-btn" id="tabletStopBtn"><i class="fas fa-stop"></i>Stop</button>
                 </div>
                 
-                <div class="tablet-onion-control">
-                    <label>
-                        <input type="checkbox" id="tabletOnionSkinToggle" checked>
-                        <i class="fas fa-eye"></i>
-                        Onion Skinning
-                    </label>
+                <div class="tablet-controls">
+                    <div class="tablet-control-group">
+                        <label>Speed: <span id="tabletSpeedValue">12</span> FPS</label>
+                        <input type="range" id="tabletPlaybackSpeed" min="1" max="60" value="12">
+                    </div>
+                    <div class="tablet-control-group">
+                        <label><input type="checkbox" id="tabletOnionSkinToggle" checked> Onion Skin</label>
+                    </div>
                 </div>
                 
-                <div class="tablet-control-group">
-                    <label>Speed: <span id="tabletSpeedValue">12</span> FPS</label>
-                    <input type="range" id="tabletPlaybackSpeed" min="1" max="60" value="12">
+                <div id="tabletFramesTimeline" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; background: rgba(0,0,0,0.1); border-radius: 8px; margin-top: 10px;">
+                    <!-- Frames will be populated by JavaScript -->
                 </div>
             </div>
             
             <!-- Layers Tab -->
             <div id="bottom-layers-tab" class="bottom-tab-content">
                 <div class="tablet-frame-controls">
-                    <button class="tablet-frame-btn" id="tabletAddLayerBtn">
-                        <i class="fas fa-plus"></i>
-                        Add Layer
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletMoveUpBtn">
-                        <i class="fas fa-arrow-up"></i>
-                        Move Up
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletMoveDownBtn">
-                        <i class="fas fa-arrow-down"></i>
-                        Move Down
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletDeleteLayerBtn">
-                        <i class="fas fa-trash"></i>
-                        Delete
-                    </button>
+                    <button class="tablet-frame-btn" id="tabletAddLayerBtn"><i class="fas fa-plus"></i>Add</button>
+                    <button class="tablet-frame-btn" id="tabletMoveUpBtn"><i class="fas fa-arrow-up"></i>Up</button>
+                    <button class="tablet-frame-btn" id="tabletMoveDownBtn"><i class="fas fa-arrow-down"></i>Down</button>
+                    <button class="tablet-frame-btn" id="tabletDeleteLayerBtn"><i class="fas fa-trash"></i>Delete</button>
+                    <button class="tablet-frame-btn" id="tabletMoveToFrontBtn"><i class="fas fa-angle-double-up"></i>Front</button>
+                    <button class="tablet-frame-btn" id="tabletMoveToBackBtn"><i class="fas fa-angle-double-down"></i>Back</button>
                 </div>
                 
                 <div class="tablet-layers-list" id="tabletLayersList">
@@ -1917,8 +1979,17 @@
                 </div>
             </div>
             
-            <!-- Settings Tab -->
-            <div id="bottom-settings-tab" class="bottom-tab-content">
+            <!-- Export Tab -->
+            <div id="bottom-export-tab" class="bottom-tab-content">
+                <div class="tablet-frame-controls">
+                    <button class="tablet-frame-btn" id="tabletNewBtn"><i class="fas fa-file-plus"></i>New</button>
+                    <button class="tablet-frame-btn" id="tabletSaveBtn"><i class="fas fa-save"></i>Save</button>
+                    <button class="tablet-frame-btn" id="tabletLoadBtn"><i class="fas fa-folder-open"></i>Load</button>
+                    <button class="tablet-frame-btn" id="tabletImportBtn"><i class="fas fa-image"></i>Import</button>
+                    <button class="tablet-frame-btn" id="tabletExportBtn"><i class="fas fa-download"></i>Export</button>
+                    <button class="tablet-frame-btn" id="tabletEffectsBtn"><i class="fas fa-magic"></i>Effects</button>
+                </div>
+                
                 <div class="tablet-controls">
                     <div class="tablet-control-group">
                         <label>Canvas Size</label>
@@ -1926,27 +1997,21 @@
                             <option value="1920x1080" selected>HD (1920x1080)</option>
                             <option value="1280x720">HD Ready (1280x720)</option>
                             <option value="800x600">Standard (800x600)</option>
+                            <option value="640x480">VGA (640x480)</option>
                         </select>
                     </div>
                     <div class="tablet-control-group">
-                        <label>Background</label>
+                        <label><input type="checkbox" id="tabletBackgroundToggle"> Background</label>
                         <input type="color" id="tabletBackgroundColor" value="#ffffff">
                     </div>
-                </div>
-                
-                <div class="tablet-frame-controls">
-                    <button class="tablet-frame-btn" id="tabletSaveBtn">
-                        <i class="fas fa-save"></i>
-                        Save
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletLoadBtn">
-                        <i class="fas fa-folder-open"></i>
-                        Load
-                    </button>
-                    <button class="tablet-frame-btn" id="tabletExportBtn">
-                        <i class="fas fa-download"></i>
-                        Export
-                    </button>
+                    <div class="tablet-control-group">
+                        <label>Zoom: <span id="tabletZoomValue">100%</span></label>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="tablet-nav-btn" id="tabletZoomInBtn"><i class="fas fa-search-plus"></i></button>
+                            <button class="tablet-nav-btn" id="tabletZoomOutBtn"><i class="fas fa-search-minus"></i></button>
+                            <button class="tablet-nav-btn" id="tabletZoomResetBtn"><i class="fas fa-expand-arrows-alt"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2234,6 +2299,102 @@
                     <button id="cancelFramePropsBtn" style="background: rgba(239, 68, 68, 0.8); border: 2px solid rgba(239, 68, 68, 0.5); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -20px -20px 0; padding: 25px; border-radius: 15px 15px 0 0;">
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 12px;"><i class="fas fa-graduation-cap" style="color: #ffd700;"></i> Animate Studio Tutorial</h2>
+                <button class="close-btn" style="color: white; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3);">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 30px;">
+                <div class="tutorial-nav" style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
+                    <button class="tutorial-tab active" data-tab="basics" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-play-circle"></i> Getting Started
+                    </button>
+                    <button class="tutorial-tab" data-tab="tools" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-tools"></i> Drawing Tools
+                    </button>
+                    <button class="tutorial-tab" data-tab="animation" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-film"></i> Animation
+                    </button>
+                </div>
+
+                <div id="tutorial-basics" class="tutorial-content active">
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-rocket"></i> Welcome to Animate Studio!</h3>
+                    <div style="background: #f8f9fa; padding: 25px; border-radius: 15px; margin-bottom: 25px;">
+                        <h4 style="color: #28a745; margin: 0 0 15px;"><i class="fas fa-lightbulb"></i> Interface Overview</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h5>🎨 Left Sidebar - Tools</h5>
+                                <ul style="color: #6c757d;">
+                                    <li>Drawing tools (Pencil, Shapes, Text)</li>
+                                    <li>Color palette and presets</li>
+                                    <li>Brush settings and opacity</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5>📚 Right Sidebar - Layers</h5>
+                                <ul style="color: #6c757d;">
+                                    <li>Layer management</li>
+                                    <li>Canvas settings</li>
+                                    <li>Zoom controls</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tutorial-tools" class="tutorial-content" style="display: none;">
+                    <h3 style="color: #4f46e5;"><i class="fas fa-palette"></i> Drawing Tools Guide</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px;">
+                            <h4 style="color: #28a745;"><i class="fas fa-arrows-alt"></i> Move Tool</h4>
+                            <p>Select, move, rotate and resize objects</p>
+                            <ul style="font-size: 14px;">
+                                <li>Click objects to select</li>
+                                <li>Drag to move</li>
+                                <li>Use handles to resize/rotate</li>
+                            </ul>
+                        </div>
+                        <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px;">
+                            <h4 style="color: #007bff;"><i class="fas fa-pencil-alt"></i> Pencil Tool</h4>
+                            <p>Draw freehand lines and sketches</p>
+                            <ul style="font-size: 14px;">
+                                <li>Click and drag to draw</li>
+                                <li>Adjust brush size</li>
+                                <li>Change opacity</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tutorial-animation" class="tutorial-content" style="display: none;">
+                    <h3 style="color: #4f46e5;"><i class="fas fa-film"></i> Animation Workflow</h3>
+                    <div style="background: #e3f2fd; padding: 25px; border-radius: 15px;">
+                        <h4 style="color: #1565c0;"><i class="fas fa-play-circle"></i> Frame-by-Frame Animation</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">1</div>
+                                <strong>Create Frame</strong>
+                                <p style="font-size: 14px;">Click "Add Frame"</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">2</div>
+                                <strong>Draw Content</strong>
+                                <p style="font-size: 14px;">Add drawings</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">3</div>
+                                <strong>Preview</strong>
+                                <p style="font-size: 14px;">Click Play</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
