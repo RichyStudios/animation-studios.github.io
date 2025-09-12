@@ -115,12 +115,21 @@ class AnimationMaker {
     }
 
     saveState() {
+        // Initialize redo stack if it doesn't exist
+        if (!this.redoStack) {
+            this.redoStack = [];
+        }
+        
+        // Clear redo stack when new action is performed
+        this.redoStack = [];
+        
+        // Save current state
         this.history.push(JSON.parse(JSON.stringify(this.frames)));
+        
+        // Limit history size
         if (this.history.length > 50) {
             this.history.shift();
         }
-        // Clear redo stack when new action is performed
-        this.redoStack = [];
     }
 
     setupEventListeners() {
@@ -143,6 +152,7 @@ class AnimationMaker {
         document.getElementById('copyBtn').addEventListener('click', () => this.copyObject());
         document.getElementById('pasteBtn').addEventListener('click', () => this.pasteObject());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportVideo());
+        document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
         document.getElementById('aboutBtn').addEventListener('click', () => this.showAbout());
         document.getElementById('importImageBtn').addEventListener('click', () => this.importImage());
         document.getElementById('coffeeBtn').addEventListener('click', () => this.openCoffeeSupport());
@@ -1696,6 +1706,19 @@ class AnimationMaker {
             this.saveState();
             this.updateObjectsList();
             this.redrawCanvas();
+        } else if (this.currentTool === 'eraser' && this.currentPath) {
+            this.createObject('eraserPath', {
+                points: this.currentPath.points,
+                lineWidth: this.currentPath.lineWidth,
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100
+            });
+            this.currentPath = null;
+            this.saveState();
+            this.updateObjectsList();
+            this.redrawCanvas();
         } else if (this.currentTool === 'flood-fill') {
             // Fill tool handled in mousedown
         }
@@ -2249,29 +2272,64 @@ class AnimationMaker {
 
     // Undo/Redo functionality
     undo() {
+        // Initialize redo stack if it doesn't exist
+        if (!this.redoStack) {
+            this.redoStack = [];
+        }
+        
         if (this.history.length > 1) {
-            this.redoStack = this.redoStack || [];
+            // Move current state to redo stack
             const currentState = this.history.pop();
             this.redoStack.push(currentState);
+            
+            // Get previous state
             const previousState = this.history[this.history.length - 1];
             this.frames = JSON.parse(JSON.stringify(previousState));
+            
+            // Ensure current frame is valid
+            if (this.currentFrame >= this.frames.length) {
+                this.currentFrame = this.frames.length - 1;
+            }
+            
+            // Clear selection and update UI
             this.selectedObject = null;
+            this.selectedObjects = [];
             this.updateObjectsList();
             this.updateFramesTimeline();
             this.updateFrameDisplay();
+            if (this.deviceType === 'tablet') {
+                this.updateTabletLayersList();
+            }
             this.redrawCanvas();
         }
     }
 
     redo() {
-        if (this.redoStack && this.redoStack.length > 0) {
+        // Initialize redo stack if it doesn't exist
+        if (!this.redoStack) {
+            this.redoStack = [];
+        }
+        
+        if (this.redoStack.length > 0) {
+            // Get state from redo stack
             const redoState = this.redoStack.pop();
             this.history.push(redoState);
             this.frames = JSON.parse(JSON.stringify(redoState));
+            
+            // Ensure current frame is valid
+            if (this.currentFrame >= this.frames.length) {
+                this.currentFrame = this.frames.length - 1;
+            }
+            
+            // Clear selection and update UI
             this.selectedObject = null;
+            this.selectedObjects = [];
             this.updateObjectsList();
             this.updateFramesTimeline();
             this.updateFrameDisplay();
+            if (this.deviceType === 'tablet') {
+                this.updateTabletLayersList();
+            }
             this.redrawCanvas();
         }
     }
@@ -2453,6 +2511,11 @@ class AnimationMaker {
     }
 
     resetZoomToFit() {
+        if (this.deviceType === 'tablet') {
+            this.setupTabletCanvas();
+            return;
+        }
+        
         const canvasContainer = document.querySelector('.canvas-container');
         
         if (canvasContainer) {
@@ -2476,6 +2539,12 @@ class AnimationMaker {
         zoomDisplays.forEach(display => {
             if (display) display.textContent = `Zoom: ${zoomPercent}%`;
         });
+        
+        // Update tablet zoom display
+        const tabletZoomValue = document.getElementById('tabletZoomValue');
+        if (tabletZoomValue) {
+            tabletZoomValue.textContent = `${zoomPercent}%`;
+        }
     }
 
     handleWheel(e) {
@@ -3067,6 +3136,45 @@ class AnimationMaker {
         }
     }
 
+    showHelp() {
+        document.getElementById('helpModal').style.display = 'block';
+        this.initHelpSystem();
+    }
+    
+    initHelpSystem() {
+        // Tutorial tab switching
+        document.querySelectorAll('.tutorial-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const tabName = tab.dataset.tab;
+                
+                // Update tab buttons
+                document.querySelectorAll('.tutorial-tab').forEach(t => {
+                    t.style.background = '#f8f9fa';
+                    t.style.color = '#495057';
+                    t.style.border = '2px solid #e9ecef';
+                    t.classList.remove('active');
+                });
+                
+                tab.style.background = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                tab.style.color = 'white';
+                tab.style.border = 'none';
+                tab.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.tutorial-content').forEach(content => {
+                    content.style.display = 'none';
+                    content.classList.remove('active');
+                });
+                
+                const targetContent = document.getElementById(`tutorial-${tabName}`);
+                if (targetContent) {
+                    targetContent.style.display = 'block';
+                    targetContent.classList.add('active');
+                }
+            });
+        });
+    }
+
     showAbout() {
         document.getElementById('aboutModal').style.display = 'block';
     }
@@ -3438,6 +3546,7 @@ class AnimationMaker {
         if (this.currentPath.type === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.lineWidth = this.currentPath.lineWidth;
+            this.ctx.strokeStyle = 'rgba(0,0,0,1)';
         } else {
             this.ctx.strokeStyle = this.currentPath.color;
             this.ctx.lineWidth = this.currentPath.lineWidth;
@@ -3454,6 +3563,9 @@ class AnimationMaker {
             this.ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
             this.ctx.stroke();
         }
+        
+        // Reset composite operation
+        this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.restore();
     }
 
@@ -4341,7 +4453,8 @@ class AnimationMaker {
     }
     
     setupTabletSupport() {
-        this.resetZoomToFit();
+        // Set up tablet-specific canvas sizing
+        this.setupTabletCanvas();
         
         // Enhanced touch/pen support for canvas
         this.canvas.addEventListener('touchstart', (e) => {
@@ -4394,6 +4507,51 @@ class AnimationMaker {
         this.setupTouchToolbar();
         
         document.documentElement.style.setProperty('--touch-size', '48px');
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.setupTabletCanvas(), 100);
+        });
+        
+        window.addEventListener('resize', () => {
+            if (this.deviceType === 'tablet') {
+                this.setupTabletCanvas();
+            }
+        });
+    }
+    
+    setupTabletCanvas() {
+        if (this.deviceType !== 'tablet') return;
+        
+        // Calculate available space
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const topMenuHeight = 60;
+        const bottomTabsHeight = 250;
+        const availableHeight = viewportHeight - topMenuHeight - bottomTabsHeight;
+        const availableWidth = viewportWidth - 20; // 10px padding each side
+        
+        // Calculate scale to fit canvas
+        const canvasAspectRatio = 1920 / 1080;
+        const availableAspectRatio = availableWidth / availableHeight;
+        
+        let scale;
+        if (availableAspectRatio > canvasAspectRatio) {
+            // Height is the limiting factor
+            scale = availableHeight / 1080;
+        } else {
+            // Width is the limiting factor
+            scale = availableWidth / 1920;
+        }
+        
+        // Apply scale with maximum limit
+        scale = Math.min(scale, 0.8);
+        this.zoom = scale;
+        this.panOffset = { x: 0, y: 0 };
+        
+        // Apply the scaling
+        this.applyZoom();
+        this.updateZoomDisplay();
     }
     
     setupTabletNavigation() {
@@ -4414,9 +4572,11 @@ class AnimationMaker {
                 });
                 document.getElementById(`bottom-${tabName}-tab`).classList.add('active');
                 
-                // Update layers list when switching to layers tab
+                // Update content when switching tabs
                 if (tabName === 'layers') {
                     this.updateTabletLayersList();
+                } else if (tabName === 'frames') {
+                    this.updateTabletFramesTimeline();
                 }
             });
         });
@@ -4441,48 +4601,67 @@ class AnimationMaker {
             });
         });
         
-        // Color and brush controls
-        const tabletColor = document.getElementById('tabletPrimaryColor');
-        const tabletBrushSize = document.getElementById('tabletBrushSize');
-        const tabletOpacity = document.getElementById('tabletOpacity');
-        
-        if (tabletColor) {
-            tabletColor.addEventListener('input', (e) => {
+        // All tablet controls
+        const controls = {
+            tabletPrimaryColor: (e) => {
                 this.primaryColor = e.target.value;
                 document.getElementById('primaryColor').value = e.target.value;
-            });
-        }
-        
-        if (tabletBrushSize) {
-            tabletBrushSize.addEventListener('input', (e) => {
+            },
+            tabletSecondaryColor: (e) => {
+                this.secondaryColor = e.target.value;
+                document.getElementById('secondaryColor').value = e.target.value;
+            },
+            tabletBrushSize: (e) => {
                 this.brushSize = parseInt(e.target.value);
                 document.getElementById('tabletBrushSizeValue').textContent = e.target.value;
                 document.getElementById('brushSize').value = e.target.value;
                 document.getElementById('brushSizeValue').textContent = e.target.value;
-            });
-        }
-        
-        if (tabletOpacity) {
-            tabletOpacity.addEventListener('input', (e) => {
+            },
+            tabletOpacity: (e) => {
                 this.opacity = parseInt(e.target.value) / 100;
                 document.getElementById('tabletOpacityValue').textContent = e.target.value;
                 document.getElementById('opacity').value = e.target.value;
                 document.getElementById('opacityValue').textContent = e.target.value;
-            });
-        }
+            },
+            tabletFontSize: (e) => {
+                this.fontSize = parseInt(e.target.value);
+                document.getElementById('tabletFontSizeValue').textContent = e.target.value;
+                document.getElementById('fontSize').value = e.target.value;
+                document.getElementById('fontSizeValue').textContent = e.target.value;
+            },
+            tabletFontFamily: (e) => {
+                this.fontFamily = e.target.value;
+                document.getElementById('fontFamily').value = e.target.value;
+            }
+        };
+        
+        Object.keys(controls).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', controls[id]);
+            }
+        });
         
         // Frame controls
-        document.getElementById('tabletAddFrameBtn').addEventListener('click', () => this.addFrame());
-        document.getElementById('tabletCopyFrameBtn').addEventListener('click', () => this.duplicateFrame());
-        document.getElementById('tabletRemoveFrameBtn').addEventListener('click', () => this.removeFrame());
+        const frameControls = {
+            tabletAddFrameBtn: () => this.addFrame(),
+            tabletCopyFrameBtn: () => this.duplicateFrame(),
+            tabletRemoveFrameBtn: () => this.removeFrame(),
+            tabletPrevFrameBtn: () => this.previousFrame(),
+            tabletNextFrameBtn: () => this.nextFrame(),
+            tabletPlayBtn: () => {
+                this.togglePlayback();
+                this.updateTabletPlayButton();
+            },
+            tabletStopBtn: () => this.stopPlayback()
+        };
         
-        // Playback controls
-        document.getElementById('tabletPlayBtn').addEventListener('click', () => {
-            this.togglePlayback();
-            this.updateTabletPlayButton();
+        Object.keys(frameControls).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', frameControls[id]);
+            }
         });
-        document.getElementById('tabletPrevFrameBtn').addEventListener('click', () => this.previousFrame());
-        document.getElementById('tabletNextFrameBtn').addEventListener('click', () => this.nextFrame());
         
         // Onion skinning
         const tabletOnionToggle = document.getElementById('tabletOnionSkinToggle');
@@ -4520,15 +4699,69 @@ class AnimationMaker {
         }
         
         // Layer controls
-        document.getElementById('tabletAddLayerBtn').addEventListener('click', () => this.createGroup());
-        document.getElementById('tabletMoveUpBtn').addEventListener('click', () => this.moveUp());
-        document.getElementById('tabletMoveDownBtn').addEventListener('click', () => this.moveDown());
-        document.getElementById('tabletDeleteLayerBtn').addEventListener('click', () => this.deleteSelectedObject());
+        const layerControls = {
+            tabletAddLayerBtn: () => this.createGroup(),
+            tabletMoveUpBtn: () => this.moveUp(),
+            tabletMoveDownBtn: () => this.moveDown(),
+            tabletDeleteLayerBtn: () => this.deleteSelectedObject(),
+            tabletMoveToFrontBtn: () => this.moveToFront(),
+            tabletMoveToBackBtn: () => this.moveToBack()
+        };
         
-        // Settings controls
-        document.getElementById('tabletSaveBtn').addEventListener('click', () => this.saveProject());
-        document.getElementById('tabletLoadBtn').addEventListener('click', () => this.loadProject());
-        document.getElementById('tabletExportBtn').addEventListener('click', () => this.exportVideo());
+        Object.keys(layerControls).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', layerControls[id]);
+            }
+        });
+        
+        // Export and project controls
+        const projectControls = {
+            tabletNewBtn: () => this.newProject(),
+            tabletSaveBtn: () => this.saveProject(),
+            tabletLoadBtn: () => this.loadProject(),
+            tabletImportBtn: () => this.importImage(),
+            tabletExportBtn: () => this.exportVideo(),
+            tabletEffectsBtn: () => this.showEffects(),
+            tabletZoomInBtn: () => this.zoomIn(),
+            tabletZoomOutBtn: () => this.zoomOut(),
+            tabletZoomResetBtn: () => this.resetZoomToFit()
+        };
+        
+        Object.keys(projectControls).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', projectControls[id]);
+            }
+        });
+        
+        // Background and canvas controls
+        const tabletBackgroundToggle = document.getElementById('tabletBackgroundToggle');
+        if (tabletBackgroundToggle) {
+            tabletBackgroundToggle.addEventListener('change', (e) => {
+                this.backgroundEnabled = e.target.checked;
+                document.getElementById('backgroundToggle').checked = e.target.checked;
+                this.redrawCanvas();
+            });
+        }
+        
+        const tabletBackgroundColor = document.getElementById('tabletBackgroundColor');
+        if (tabletBackgroundColor) {
+            tabletBackgroundColor.addEventListener('input', (e) => {
+                this.backgroundColor = e.target.value;
+                document.getElementById('backgroundColor').value = e.target.value;
+                this.frames[this.currentFrame].backgroundColor = this.backgroundColor;
+                this.redrawCanvas();
+            });
+        }
+        
+        const tabletCanvasSize = document.getElementById('tabletCanvasSize');
+        if (tabletCanvasSize) {
+            tabletCanvasSize.addEventListener('change', (e) => {
+                const [width, height] = e.target.value.split('x').map(Number);
+                this.resizeCanvas(width, height);
+            });
+        }
     }
     
     updateTabletPlayButton() {
@@ -4572,6 +4805,40 @@ class AnimationMaker {
             });
             
             layersList.appendChild(layerDiv);
+        });
+    }
+    
+    updateTabletFramesTimeline() {
+        const timeline = document.getElementById('tabletFramesTimeline');
+        if (!timeline) return;
+        
+        timeline.innerHTML = '';
+        
+        this.frames.forEach((frame, index) => {
+            const frameDiv = document.createElement('div');
+            frameDiv.style.cssText = `
+                min-width: 60px;
+                height: 40px;
+                background: ${index === this.currentFrame ? '#4f46e5' : 'white'};
+                border: 2px solid ${index === this.currentFrame ? '#4f46e5' : '#ddd'};
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: ${index === this.currentFrame ? 'white' : '#333'};
+                font-size: 12px;
+                font-weight: bold;
+            `;
+            
+            frameDiv.textContent = index + 1;
+            
+            frameDiv.addEventListener('click', () => {
+                this.loadFrame(index);
+                this.updateTabletFramesTimeline();
+            });
+            
+            timeline.appendChild(frameDiv);
         });
     }
     
