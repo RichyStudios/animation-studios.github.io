@@ -979,6 +979,26 @@ class AnimationMaker {
                     });
                 }
                 break;
+            case 'bone':
+                this.ctx.strokeStyle = obj.data.color || '#22c55e';
+                this.ctx.lineWidth = obj.data.lineWidth || 6;
+                this.ctx.lineCap = 'round';
+                
+                // Draw bone line
+                this.ctx.beginPath();
+                this.ctx.moveTo(-w/2, 0);
+                this.ctx.lineTo(w/2, 0);
+                this.ctx.stroke();
+                
+                // Draw joint circles
+                this.ctx.fillStyle = obj.data.color || '#22c55e';
+                this.ctx.beginPath();
+                this.ctx.arc(-w/2, 0, 8, 0, 2 * Math.PI);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(w/2, 0, 8, 0, 2 * Math.PI);
+                this.ctx.fill();
+                break;
             case 'eraser':
                 this.ctx.globalCompositeOperation = 'destination-out';
                 this.ctx.beginPath();
@@ -1366,7 +1386,14 @@ class AnimationMaker {
             return;
         }
 
-        if (this.currentTool === 'move' || this.currentTool === 'bone') {
+        if (this.currentTool === 'bone') {
+            this.createBone(pos.x, pos.y);
+            this.saveState();
+            return;
+        }
+
+        if (this.currentTool === 'move') {
+            
             if (this.selectedObject) {
                 const bounds = this.getObjectBounds(this.selectedObject);
                 const rotateX = bounds.x + bounds.width / 2;
@@ -1427,9 +1454,6 @@ class AnimationMaker {
             }
             
             const clickedObject = this.findObjectAtPosition(pos.x, pos.y);
-            
-            // Bone tool only selects drawn objects (paths and eraserPaths)
-
             
             if (clickedObject) {
                 this.selectedObject = clickedObject;
@@ -1522,6 +1546,10 @@ class AnimationMaker {
                         point.y += dy;
                     });
 
+                } else if (this.selectedObject.type === 'bone') {
+                    this.selectedObject.x += dx;
+                    this.selectedObject.y += dy;
+                    this.updateConnectedBones(this.selectedObject);
                 } else {
                     this.selectedObject.x += dx;
                     this.selectedObject.y += dy;
@@ -2582,21 +2610,39 @@ class AnimationMaker {
         const exportOptions = await this.showExportDialog();
         if (!exportOptions) return;
 
-        const fps = exportOptions.fps === 'current' ? this.playbackSpeed : parseInt(exportOptions.fps) || this.playbackSpeed;
+        // Use current playback speed setting
+        const fps = this.playbackSpeed;
+        
+        // Include current canvas dimensions and all drawing settings
+        const exportSettings = {
+            quality: exportOptions.quality,
+            fps: fps,
+            canvasWidth: this.canvas.width,
+            canvasHeight: this.canvas.height,
+            backgroundEnabled: this.backgroundEnabled,
+            backgroundColor: this.backgroundColor,
+            totalFrames: this.frames.length,
+            onionSkinEnabled: this.onionSkinEnabled,
+            drawingMode: this.drawingMode,
+            pixelSize: this.pixelSize
+        };
         
         if (exportOptions.format === 'images') {
-            this.exportImageSequence(exportOptions.quality, fps);
+            this.exportImageSequence(exportSettings);
             return;
         }
         
         if (exportOptions.format === 'video') {
-            this.exportVideoFile(exportOptions.quality, fps);
+            this.exportVideoFile(exportSettings);
             return;
         }
     }
 
     getSupportedMimeType() {
         const types = [
+            'video/mp4; codecs="avc1.42E01E"',
+            'video/mp4; codecs="h264"',
+            'video/mp4',
             'video/webm; codecs="vp9"',
             'video/webm; codecs="vp8"',
             'video/webm'
@@ -2637,39 +2683,66 @@ class AnimationMaker {
 
     showExportProgress(format = 'Video') {
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(5px);';
         
         const content = document.createElement('div');
-        content.style.cssText = 'background:white;padding:30px;border-radius:10px;text-align:center;min-width:300px;';
+        content.style.cssText = 'background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:40px;border-radius:20px;text-align:center;min-width:400px;color:white;box-shadow:0 20px 40px rgba(0,0,0,0.3);';
         
         const title = document.createElement('h3');
-        title.textContent = format === 'GIF' ? 'Exporting GIF...' : 'Exporting Video...';
+        title.innerHTML = `<i class="fas fa-${format === 'Video' ? 'video' : format === 'Image Sequence' ? 'images' : 'file-export'}" style="margin-right:10px;color:#ffd700;"></i>Exporting ${format}...`;
+        title.style.cssText = 'margin:0 0 20px;font-size:1.8em;text-shadow:0 2px 10px rgba(0,0,0,0.3);';
+        
+        const info = document.createElement('div');
+        info.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:10px;padding:15px;margin-bottom:20px;';
+        info.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;font-size:14px;">
+                <div><strong>📊 Frames:</strong> ${this.frames.length}</div>
+                <div><strong>⚡ FPS:</strong> ${this.playbackSpeed}</div>
+                <div><strong>📐 Size:</strong> ${this.canvas.width}x${this.canvas.height}</div>
+                <div><strong>🎨 Layers:</strong> ${this.frames.reduce((total, frame) => total + (frame.objects ? frame.objects.length : 0), 0)}</div>
+            </div>
+        `;
         
         const bar = document.createElement('div');
-        bar.style.cssText = 'width:100%;height:20px;background:#f0f0f0;border-radius:10px;margin:20px 0;';
+        bar.style.cssText = 'width:100%;height:25px;background:rgba(255,255,255,0.2);border-radius:15px;margin:20px 0;overflow:hidden;';
         
         const progress = document.createElement('div');
-        progress.style.cssText = 'height:100%;background:linear-gradient(45deg,#4f46e5,#7c3aed);width:0%;border-radius:10px;transition:width 0.3s;';
+        progress.style.cssText = 'height:100%;background:linear-gradient(45deg,#ffd700,#ffed4e);width:0%;border-radius:15px;transition:width 0.3s;box-shadow:0 0 20px rgba(255,215,0,0.5);';
         
         const text = document.createElement('p');
-        text.textContent = 'Frame 0 of 0';
+        text.textContent = 'Preparing export...';
+        text.style.cssText = 'margin:10px 0;font-size:16px;font-weight:500;';
         
-        const info = document.createElement('p');
-        info.style.cssText = 'margin:10px 0;color:#666;font-size:14px;';
-        info.textContent = `Exporting at ${this.playbackSpeed} FPS`;
+        const eta = document.createElement('p');
+        eta.style.cssText = 'margin:5px 0 0;font-size:12px;opacity:0.8;';
+        eta.textContent = 'Estimated time: Calculating...';
         
         bar.appendChild(progress);
         content.appendChild(title);
         content.appendChild(info);
         content.appendChild(bar);
         content.appendChild(text);
+        content.appendChild(eta);
         modal.appendChild(content);
         document.body.appendChild(modal);
         
+        let startTime = Date.now();
+        
         return {
             update: (current, total) => {
-                progress.style.width = (current / total) * 100 + '%';
-                text.textContent = `Frame ${current} of ${total} (${Math.round((current/total)*100)}%)`;
+                const percentage = Math.round((current / total) * 100);
+                progress.style.width = percentage + '%';
+                text.textContent = `Frame ${current} of ${total} (${percentage}%)`;
+                
+                // Calculate ETA
+                if (current > 0) {
+                    const elapsed = Date.now() - startTime;
+                    const avgTimePerFrame = elapsed / current;
+                    const remainingFrames = total - current;
+                    const etaMs = remainingFrames * avgTimePerFrame;
+                    const etaSeconds = Math.round(etaMs / 1000);
+                    eta.textContent = `Estimated time remaining: ${etaSeconds}s`;
+                }
             },
             close: () => document.body.removeChild(modal)
         };
@@ -2710,7 +2783,10 @@ class AnimationMaker {
                     <h3 style="margin:0 0 8px;font-size:1.3em;">Video Export</h3>
                     <p style="margin:0 0 10px;font-size:0.9em;opacity:0.8;">MP4/WebM Format</p>
                     <div style="background:rgba(79,70,229,0.2);padding:5px 10px;border-radius:15px;font-size:0.8em;">
-                        ✨ High Quality • Small Size
+                        ✨ Ready to Play • Small Size
+                    </div>
+                    <div style="font-size:0.7em;opacity:0.6;margin-top:5px;">
+                        ⚠️ May need VLC for playback
                     </div>
                 </div>
             `;
@@ -2723,7 +2799,10 @@ class AnimationMaker {
                     <h3 style="margin:0 0 8px;font-size:1.3em;">Image Sequence</h3>
                     <p style="margin:0 0 10px;font-size:0.9em;opacity:0.8;">PNG/JPEG Frames</p>
                     <div style="background:rgba(34,197,94,0.2);padding:5px 10px;border-radius:15px;font-size:0.8em;">
-                        🎨 Perfect Quality • Frame Control
+                        🎨 Perfect Quality • Universal
+                    </div>
+                    <div style="font-size:0.7em;opacity:0.6;margin-top:5px;">
+                        ✅ Works with all video editors
                     </div>
                 </div>
             `;
@@ -2747,10 +2826,6 @@ class AnimationMaker {
                         <label style="display:block;margin-bottom:5px;font-size:0.9em;">Frame Rate:</label>
                         <select id="exportFPS" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.9);color:#333;">
                             <option value="current" selected>Current Speed (${this.playbackSpeed} FPS)</option>
-                            <option value="12">12 FPS (Smooth)</option>
-                            <option value="24">24 FPS (Standard)</option>
-                            <option value="30">30 FPS (High)</option>
-                            <option value="60">60 FPS (Ultra)</option>
                         </select>
                     </div>
                 </div>
@@ -2907,45 +2982,128 @@ class AnimationMaker {
         progress.close();
     }
 
-    createImageSequenceZip(frameImages, fps, quality) {
+    createImageSequenceZip(frameImages, fps, quality, settings) {
+        const { canvasWidth, canvasHeight, backgroundEnabled, totalFrames } = settings;
         const zip = new JSZip();
+        
         frameImages.forEach((imageData, index) => {
             const base64Data = imageData.split(',')[1];
-            zip.file(`frame_${String(index + 1).padStart(4, '0')}.png`, base64Data, {base64: true});
+            const extension = quality === 'high' ? 'png' : 'jpg';
+            zip.file(`frame_${String(index + 1).padStart(4, '0')}.${extension}`, base64Data, {base64: true});
         });
         
+        // Create comprehensive export info
         const infoText = `🎬 Animation Export Info
 ========================
-📊 Frames: ${frameImages.length}
+📊 Total Frames: ${frameImages.length}
 ⚡ Frame Rate: ${fps} FPS
-🎨 Quality: ${quality}
+🎨 Quality: ${quality.toUpperCase()}
 ⏱️ Duration: ${(frameImages.length / fps).toFixed(2)} seconds
-📐 Resolution: ${this.canvas.width}x${this.canvas.height}
+📐 Resolution: ${canvasWidth}x${canvasHeight}
+🎨 Background: ${backgroundEnabled ? 'Enabled' : 'Disabled'}
 📅 Exported: ${new Date().toLocaleString()}
+🎯 Drawing Mode: ${this.drawingMode.toUpperCase()}
+👁️ Onion Skin: ${this.onionSkinEnabled ? 'Enabled' : 'Disabled'}
+
+📋 Layer Information:
+${this.frames.map((frame, i) => `Frame ${i + 1}: ${frame.objects ? frame.objects.length : 0} objects`).join('\n')}
 
 💡 Usage Tips:
 - Import frames into video editing software
 - Use frame rate of ${fps} FPS for smooth playback
-- Frames are numbered sequentially for easy import`;
+- Frames are numbered sequentially for easy import
+- ${quality === 'high' ? 'PNG format preserves transparency and quality' : 'JPEG format provides smaller file sizes'}
+
+🔧 Export Settings Used:
+- Canvas Size: ${canvasWidth}x${canvasHeight}
+- Quality: ${quality}
+- Frame Rate: ${fps} FPS
+- Total Duration: ${(frameImages.length / fps).toFixed(2)}s`;
         zip.file('README.txt', infoText);
+        
+        // Add project file for re-importing
+        const projectData = {
+            frames: this.frames,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+            playbackSpeed: fps,
+            backgroundEnabled: backgroundEnabled,
+            backgroundColor: this.backgroundColor,
+            exportDate: new Date().toISOString()
+        };
+        zip.file('project_backup.json', JSON.stringify(projectData, null, 2));
         
         zip.generateAsync({type: 'blob'}).then(content => {
             const url = URL.createObjectURL(content);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `animation_${frameImages.length}frames_${fps}fps.zip`;
+            const filename = `animation_${frameImages.length}frames_${fps}fps_${canvasWidth}x${canvasHeight}.zip`;
+            link.download = filename;
             link.click();
             URL.revokeObjectURL(url);
             
-            alert(`✅ Image sequence exported successfully!\n\n📁 ${frameImages.length} PNG frames\n⚡ ${fps} FPS\n📐 ${this.canvas.width}x${this.canvas.height}\n\n💡 Import the ZIP file into your video editor to create the final animation.`);
+            const duration = (frameImages.length / fps).toFixed(2);
+            alert(`✅ Image sequence exported successfully!\n\n📁 ${frameImages.length} ${quality === 'high' ? 'PNG' : 'JPEG'} frames\n⚡ ${fps} FPS\n📐 ${canvasWidth}x${canvasHeight}\n🎨 Quality: ${quality.toUpperCase()}\n⏱️ Duration: ${duration}s\n\n🎬 Next Steps:\n1. Extract the ZIP file\n2. Import frames into video editor\n3. Set frame rate to ${fps} FPS\n4. Export as MP4/MOV`);
+            
+            // Show video creation guide
+            setTimeout(() => {
+                if (confirm('🎥 Would you like a guide on creating video from these frames?')) {
+                    const guideWindow = window.open('', '_blank', 'width=700,height=500');
+                    guideWindow.document.write(`
+                        <html><head><title>Create Video from Image Sequence</title></head>
+                        <body style="font-family:Arial;padding:20px;line-height:1.6;">
+                        <h2>🎥 How to Create Video from Your Frames</h2>
+                        
+                        <h3>🆓 Free Video Editors:</h3>
+                        <ul>
+                            <li><strong>DaVinci Resolve</strong> (Professional, Free)
+                                <br><small>1. Create new project → Import → Select all frames → Set to ${fps} FPS</small></li>
+                            <li><strong>OpenShot</strong> (Simple, Free)
+                                <br><small>1. Import frames → Drag to timeline → Right-click → Properties → Set duration</small></li>
+                            <li><strong>Blender</strong> (Advanced, Free)
+                                <br><small>Video Editing workspace → Add Image Sequence → Set frame rate</small></li>
+                        </ul>
+                        
+                        <h3>📱 Online Tools:</h3>
+                        <ul>
+                            <li><strong>EZGIF.com</strong> - Upload frames, set ${fps} FPS, create MP4</li>
+                            <li><strong>Canva</strong> - Import frames, create video presentation</li>
+                            <li><strong>Kapwing</strong> - Sequence to video converter</li>
+                        </ul>
+                        
+                        <h3>⚙️ Settings to Use:</h3>
+                        <ul>
+                            <li><strong>Frame Rate:</strong> ${fps} FPS</li>
+                            <li><strong>Duration per frame:</strong> ${(1/fps).toFixed(3)} seconds</li>
+                            <li><strong>Total duration:</strong> ${duration} seconds</li>
+                            <li><strong>Resolution:</strong> ${canvasWidth}x${canvasHeight}</li>
+                        </ul>
+                        
+                        <div style="background:#e3f2fd;padding:15px;border-radius:8px;margin:20px 0;">
+                            <strong>💡 Pro Tip:</strong> Most video editors can import the entire sequence at once. 
+                            Just select the first frame and check "Image Sequence" or "Import as sequence".
+                        </div>
+                        </body></html>
+                    `);
+                }
+            }, 1500);
         });
     }
     
-    exportVideoFile(quality = 'medium', fps = 24) {
+    exportVideoFile(settings) {
+        const { quality = 'medium', fps = 24, canvasWidth, canvasHeight, backgroundEnabled, backgroundColor, totalFrames } = settings;
+        
         const canvas = document.createElement('canvas');
-        canvas.width = this.canvas.width;
-        canvas.height = this.canvas.height;
+        canvas.width = canvasWidth || this.canvas.width;
+        canvas.height = canvasHeight || this.canvas.height;
         const ctx = canvas.getContext('2d');
+        
+        // Set canvas rendering mode to match current settings
+        if (this.drawingMode === 'pixel') {
+            ctx.imageSmoothingEnabled = false;
+        } else {
+            ctx.imageSmoothingEnabled = true;
+        }
         
         const qualityMap = { high: 2500000, medium: 1500000, low: 800000 };
         const bitrate = qualityMap[quality] || 1500000;
@@ -2969,25 +3127,36 @@ class AnimationMaker {
                 const blob = new Blob(chunks, { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
+                
+                // Determine file extension based on mime type
+                const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+                const filename = `animation_${totalFrames}frames_${fps}fps_${canvasWidth}x${canvasHeight}.${extension}`;
+                
                 link.href = url;
-                link.download = `animation_${this.frames.length}frames_${fps}fps.webm`;
+                link.download = filename;
                 link.click();
                 URL.revokeObjectURL(url);
                 
-                alert(`✅ Video exported successfully!\n\nFrames: ${this.frames.length}\nFPS: ${fps}\nFormat: WEBM`);
+                const format = extension.toUpperCase();
+                alert(`✅ Video exported successfully!\n\nFrames: ${totalFrames}\nFPS: ${fps}\nResolution: ${canvasWidth}x${canvasHeight}\nFormat: ${format}\nQuality: ${quality.toUpperCase()}`);
             };
             
             recorder.start(100);
-            this.renderFramesForVideo(0, ctx, canvas, progress, fps, recorder);
+            this.renderFramesForVideo(0, ctx, canvas, progress, fps, recorder, settings);
             
         } catch (error) {
-            alert('❌ Video export failed. Try Image Sequence export instead.');
-            console.error(error);
+            console.error('Video export error:', error);
             progress.close();
+            
+            // Fallback to image sequence if video recording fails
+            const fallbackConfirm = confirm('❌ Video export failed. Would you like to export as image sequence instead?');
+            if (fallbackConfirm) {
+                this.exportImageSequence(settings);
+            }
         }
     }
     
-    renderFramesForVideo(frameIndex, ctx, canvas, progress, fps, recorder) {
+    renderFramesForVideo(frameIndex, ctx, canvas, progress, fps, recorder, settings) {
         if (frameIndex >= this.frames.length) {
             setTimeout(() => {
                 recorder.stop();
@@ -2997,24 +3166,43 @@ class AnimationMaker {
         }
         
         const frame = this.frames[frameIndex];
+        const { backgroundEnabled, backgroundColor } = settings;
         
+        // Clear and prepare canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        if (this.backgroundEnabled && frame.backgroundColor) {
-            ctx.fillStyle = frame.backgroundColor;
+        // Apply background
+        if (backgroundEnabled || this.backgroundEnabled) {
+            const bgColor = frame.backgroundColor || backgroundColor || this.backgroundColor || 'white';
+            ctx.fillStyle = bgColor;
         } else {
             ctx.fillStyle = 'white';
         }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
+        // Render all visible objects with proper compositing
         if (frame.objects) {
             frame.objects.forEach(obj => {
                 if (obj.visible) {
                     ctx.save();
+                    
+                    // Apply object opacity
+                    if (obj.opacity !== undefined && obj.opacity < 1) {
+                        ctx.globalAlpha = obj.opacity;
+                    }
+                    
+                    // Apply mask effect if needed
+                    if (obj.isMask) {
+                        ctx.globalCompositeOperation = 'destination-in';
+                    }
+                    
+                    // Apply transformations
                     ctx.translate(obj.x, obj.y);
                     ctx.rotate(obj.rotation);
                     ctx.scale(obj.scaleX, obj.scaleY);
-                    this.drawObjectOnCanvas(obj, ctx);
+                    
+                    // Draw the object with all its properties
+                    this.drawObjectForExport(obj, ctx);
                     ctx.restore();
                 }
             });
@@ -3022,16 +3210,184 @@ class AnimationMaker {
         
         progress.update(frameIndex + 1, this.frames.length);
         
+        // Use much slower timing to match playback speed exactly
+        const frameDelay = 1000 / fps;
         setTimeout(() => {
-            this.renderFramesForVideo(frameIndex + 1, ctx, canvas, progress, fps, recorder);
-        }, 1000 / fps);
+            this.renderFramesForVideo(frameIndex + 1, ctx, canvas, progress, fps, recorder, settings);
+        }, frameDelay);
     }
     
-    exportImageSequence(quality = 'medium', fps = 24) {
+    drawObjectForExport(obj, ctx) {
+        // Set drawing properties
+        ctx.strokeStyle = obj.data?.color || '#000000';
+        ctx.fillStyle = obj.data?.fillColor || obj.data?.color || '#000000';
+        ctx.lineWidth = obj.data?.lineWidth || 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Apply object-specific opacity
+        if (obj.data?.opacity !== undefined && obj.data.opacity < 1) {
+            ctx.globalAlpha = obj.data.opacity;
+        }
+        
+        const w = obj.data?.width || 50;
+        const h = obj.data?.height || 50;
+        
+        switch (obj.type) {
+            case 'path':
+            case 'eraserPath':
+                if (obj.data?.points && obj.data.points.length > 1) {
+                    if (obj.type === 'eraserPath') {
+                        ctx.globalCompositeOperation = 'destination-out';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(obj.data.points[0].x, obj.data.points[0].y);
+                    for (let i = 1; i < obj.data.points.length; i++) {
+                        ctx.lineTo(obj.data.points[i].x, obj.data.points[i].y);
+                    }
+                    if (obj.data.closed && obj.data.fillColor) {
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+                    if (obj.type === 'eraserPath') {
+                        ctx.globalCompositeOperation = 'source-over';
+                    }
+                }
+                break;
+            case 'line':
+                ctx.beginPath();
+                ctx.moveTo(obj.data.startX || -w/2, obj.data.startY || -h/2);
+                ctx.lineTo(obj.data.endX || w/2, obj.data.endY || h/2);
+                ctx.stroke();
+                break;
+            case 'circle':
+                ctx.beginPath();
+                const radiusX = obj.data.radiusX || w/2;
+                const radiusY = obj.data.radiusY || h/2;
+                ctx.save();
+                ctx.scale(radiusX / Math.max(radiusX, radiusY), radiusY / Math.max(radiusX, radiusY));
+                ctx.arc(0, 0, Math.max(radiusX, radiusY), 0, 2 * Math.PI);
+                ctx.restore();
+                if (obj.data?.fillColor) ctx.fill();
+                ctx.stroke();
+                break;
+            case 'square':
+                ctx.beginPath();
+                ctx.rect(-w/2, -h/2, w, h);
+                if (obj.data?.fillColor) ctx.fill();
+                ctx.stroke();
+                break;
+            case 'triangle':
+                ctx.beginPath();
+                ctx.moveTo(0, -h/2);
+                ctx.lineTo(-w/2, h/2);
+                ctx.lineTo(w/2, h/2);
+                ctx.closePath();
+                if (obj.data?.fillColor) ctx.fill();
+                ctx.stroke();
+                break;
+            case 'star':
+                const starRadiusX = obj.data.radiusX || w/2;
+                const starRadiusY = obj.data.radiusY || h/2;
+                ctx.save();
+                ctx.scale(starRadiusX / Math.max(starRadiusX, starRadiusY), starRadiusY / Math.max(starRadiusX, starRadiusY));
+                const maxRadius = Math.max(starRadiusX, starRadiusY);
+                this.drawStar(0, 0, 5, maxRadius, maxRadius * 0.4, obj.data.fillColor);
+                ctx.restore();
+                break;
+            case 'arrow':
+                this.drawArrow(-w/2, 0, w/2, 0, obj.data.fillColor);
+                break;
+            case 'text':
+                ctx.font = `${obj.data.fontSize}px ${obj.data.fontFamily}`;
+                ctx.fillText(obj.data.text, -w/2, 0);
+                break;
+            case 'group':
+                if (obj.objects) {
+                    obj.objects.forEach(groupObj => {
+                        if (groupObj.visible) {
+                            ctx.save();
+                            ctx.translate(groupObj.x, groupObj.y);
+                            ctx.rotate(groupObj.rotation);
+                            ctx.scale(groupObj.scaleX, groupObj.scaleY);
+                            this.drawObjectForExport(groupObj, ctx);
+                            ctx.restore();
+                        }
+                    });
+                }
+                break;
+            case 'raindrop':
+                ctx.beginPath();
+                const dropWidth = obj.data.width || 5;
+                const dropHeight = obj.data.height || 15;
+                ctx.moveTo(0, -dropHeight/2);
+                ctx.quadraticCurveTo(-dropWidth/2, -dropHeight/4, -dropWidth/2, dropHeight/4);
+                ctx.quadraticCurveTo(-dropWidth/4, dropHeight/2, 0, dropHeight/2);
+                ctx.quadraticCurveTo(dropWidth/4, dropHeight/2, dropWidth/2, dropHeight/4);
+                ctx.quadraticCurveTo(dropWidth/2, -dropHeight/4, 0, -dropHeight/2);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case 'snowflake':
+                const flakeSize = obj.data.width || 8;
+                ctx.strokeStyle = obj.data.color || '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(cos * flakeSize, sin * flakeSize);
+                    ctx.stroke();
+                }
+                break;
+            case 'flame':
+                const flameSize = obj.data.width || 80;
+                const gradient = ctx.createLinearGradient(0, flameSize/2, 0, -flameSize/2);
+                gradient.addColorStop(0, '#ff4500');
+                gradient.addColorStop(0.3, '#ff6500');
+                gradient.addColorStop(0.6, '#ffaa00');
+                gradient.addColorStop(0.8, '#ffdd00');
+                gradient.addColorStop(1, '#fff200');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                for (let i = 0; i <= 12; i++) {
+                    const angle = (i / 12) * Math.PI;
+                    const baseRadius = flameSize * 0.4;
+                    const radius = baseRadius;
+                    const x = Math.sin(angle) * radius;
+                    const y = -Math.cos(angle) * radius * 1.5;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case 'image':
+                if (obj.data.image) {
+                    ctx.drawImage(obj.data.image, -obj.data.width/2, -obj.data.height/2, obj.data.width, obj.data.height);
+                }
+                break;
+        }
+    }
+    
+    exportImageSequence(settings) {
+        const { quality = 'medium', fps = 24, canvasWidth, canvasHeight, backgroundEnabled, backgroundColor } = settings;
+        
         const canvas = document.createElement('canvas');
-        canvas.width = this.canvas.width;
-        canvas.height = this.canvas.height;
+        canvas.width = canvasWidth || this.canvas.width;
+        canvas.height = canvasHeight || this.canvas.height;
         const ctx = canvas.getContext('2d');
+        
+        // Set canvas rendering mode to match current settings
+        if (this.drawingMode === 'pixel') {
+            ctx.imageSmoothingEnabled = false;
+        } else {
+            ctx.imageSmoothingEnabled = true;
+        }
         
         const qualityMap = { high: 0.95, medium: 0.85, low: 0.7 };
         const jpegQuality = qualityMap[quality] || 0.85;
@@ -3042,31 +3398,52 @@ class AnimationMaker {
         this.frames.forEach((frame, index) => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            if (this.backgroundEnabled && frame.backgroundColor) {
-                ctx.fillStyle = frame.backgroundColor;
+            // Apply background
+            if (backgroundEnabled || this.backgroundEnabled) {
+                const bgColor = frame.backgroundColor || backgroundColor || this.backgroundColor || 'white';
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
                 ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Render all visible objects with proper compositing
             if (frame.objects) {
                 frame.objects.forEach(obj => {
                     if (obj.visible) {
                         ctx.save();
+                        
+                        // Apply object opacity
+                        if (obj.opacity !== undefined && obj.opacity < 1) {
+                            ctx.globalAlpha = obj.opacity;
+                        }
+                        
+                        // Apply mask effect if needed
+                        if (obj.isMask) {
+                            ctx.globalCompositeOperation = 'destination-in';
+                        }
+                        
+                        // Apply transformations
                         ctx.translate(obj.x, obj.y);
                         ctx.rotate(obj.rotation);
                         ctx.scale(obj.scaleX, obj.scaleY);
-                        this.drawObjectOnCanvas(obj, ctx);
+                        
+                        // Draw the object with all its properties
+                        this.drawObjectForExport(obj, ctx);
                         ctx.restore();
                     }
                 });
             }
             
-            frameImages.push(canvas.toDataURL('image/jpeg', jpegQuality));
+            // Use PNG for better quality, JPEG for smaller size
+            const imageFormat = quality === 'high' ? 'image/png' : 'image/jpeg';
+            const imageData = quality === 'high' ? canvas.toDataURL(imageFormat) : canvas.toDataURL(imageFormat, jpegQuality);
+            frameImages.push(imageData);
             progress.update(index + 1, this.frames.length);
         });
         
-        this.createImageSequenceZip(frameImages, fps, quality);
+        this.createImageSequenceZip(frameImages, fps, quality, settings);
         progress.close();
     }
 
@@ -3851,38 +4228,25 @@ class AnimationMaker {
     }
 
     createBone(x, y) {
-        if (this.lastBone) {
-            const bone = {
-                id: ++this.objectIdCounter,
-                type: 'bone',
-                startX: this.lastBone.endX,
-                startY: this.lastBone.endY,
-                endX: x,
-                endY: y,
-                parent: this.lastBone,
-                children: [],
-                data: { color: '#ff6b35', lineWidth: 3 },
-                x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, visible: true
-            };
-            this.lastBone.children.push(bone);
-            this.frames[this.currentFrame].objects.push(bone);
-            this.lastBone = bone;
-        } else {
-            const bone = {
-                id: ++this.objectIdCounter,
-                type: 'bone',
-                startX: x - 50,
-                startY: y,
-                endX: x,
-                endY: y,
-                parent: null,
-                children: [],
-                data: { color: '#ff6b35', lineWidth: 3 },
-                x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, visible: true
-            };
-            this.frames[this.currentFrame].objects.push(bone);
-            this.lastBone = bone;
-        }
+        const bone = {
+            id: ++this.objectIdCounter,
+            type: 'bone',
+            data: { 
+                color: '#22c55e', 
+                lineWidth: 6, 
+                width: 100, 
+                height: 20 
+            },
+            x: x,
+            y: y,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            visible: true
+        };
+        
+        this.frames[this.currentFrame].objects.push(bone);
+        this.selectedObject = bone;
         this.updateObjectsList();
         this.redrawCanvas();
     }
@@ -4506,6 +4870,9 @@ class AnimationMaker {
         // Touch-friendly toolbar
         this.setupTouchToolbar();
         
+        // Setup tablet tool controls
+        this.setupTabletTools();
+        
         document.documentElement.style.setProperty('--touch-size', '48px');
         
         // Handle orientation changes
@@ -4951,6 +5318,32 @@ class AnimationMaker {
             slider.style.height = '44px';
             slider.style.cursor = 'pointer';
         });
+    }
+    
+    setupTabletTools() {
+        // Tool selection for tablet
+        document.querySelectorAll('.tablet-tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tool = btn.dataset.tool;
+                if (tool) {
+                    this.setTool(tool);
+                    
+                    // Update tablet tool buttons
+                    document.querySelectorAll('.tablet-tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Update desktop tool buttons
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    const desktopBtn = document.querySelector(`[data-tool="${tool}"]`);
+                    if (desktopBtn) desktopBtn.classList.add('active');
+                }
+            });
+        });
+    }
+    
+    setTool(tool) {
+        this.currentTool = tool;
+        this.updateCanvasCursor();
     }
     
     applyDisplayMode(mode) {
