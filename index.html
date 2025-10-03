@@ -13,7 +13,7 @@
         /* Font Face Declarations */
         @font-face {
             font-family: 'Gallaudet';
-            src: local('Noto Sans'), local('Arial'), local('Helvetica');
+            src: local('Gallaudet'), local('Noto Sans'), local('Arial'), local('Helvetica');
             font-display: swap;
         }
         
@@ -985,6 +985,82 @@
         .expand-btn:hover {
             color: #333;
         }
+
+        /* Cross-Browser Canvas Tab Compatibility */
+        .sidebar-tabs .tab-btn {
+            -webkit-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            -moz-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            -ms-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            -o-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        .sidebar-tabs .tab-btn:hover:not(.active) {
+            background: rgba(79, 70, 229, 0.1) !important;
+            color: #4f46e5 !important;
+            -webkit-transform: translateY(-1px);
+            -moz-transform: translateY(-1px);
+            -ms-transform: translateY(-1px);
+            -o-transform: translateY(-1px);
+            transform: translateY(-1px);
+        }
+
+        .sidebar-tabs .tab-btn.active {
+            background: -webkit-linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            background: -moz-linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            background: -ms-linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            background: -o-linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            color: white !important;
+            -webkit-box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4) !important;
+            -moz-box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4) !important;
+            -webkit-transform: translateY(-2px);
+            -moz-transform: translateY(-2px);
+            -ms-transform: translateY(-2px);
+            -o-transform: translateY(-2px);
+            transform: translateY(-2px);
+        }
+
+        .sidebar-tabs .tab-btn i {
+            -webkit-transition: -webkit-transform 0.3s ease;
+            -moz-transition: -moz-transform 0.3s ease;
+            -ms-transition: -ms-transform 0.3s ease;
+            -o-transition: -o-transform 0.3s ease;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-tabs .tab-btn:hover i {
+            -webkit-transform: scale(1.1);
+            -moz-transform: scale(1.1);
+            -ms-transform: scale(1.1);
+            -o-transform: scale(1.1);
+            transform: scale(1.1);
+        }
+
+        .sidebar-tabs .tab-btn.active i {
+            -webkit-transform: scale(1.05);
+            -moz-transform: scale(1.05);
+            -ms-transform: scale(1.05);
+            -o-transform: scale(1.05);
+            transform: scale(1.05);
+        }
+
+        /* Fallback for older browsers */
+        .sidebar-tabs {
+            background: #f8f9fa;
+            background: -webkit-linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: -moz-linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: -ms-linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: -o-linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            -webkit-border-radius: 12px;
+            -moz-border-radius: 12px;
+            border-radius: 12px;
+            -webkit-box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            -moz-box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -1206,7 +1282,7 @@
                 <h4>Text Settings</h4>
                 <div class="setting-group">
                     <label>Size: <span id="fontSizeValue">24</span>px</label>
-                    <input type="range" id="fontSize" min="10" max="100" value="24" class="modern-slider">
+                    <input type="range" id="fontSize" min="8" max="200" value="24" class="modern-slider">
                 </div>
                 <div class="setting-group">
                     <label>Font Family:</label>
@@ -1216,7 +1292,7 @@
                         <option value="'Times New Roman', Times, serif">Times New Roman</option>
                         <option value="'Courier New', Courier, monospace">Courier New</option>
                         <option value="Helvetica, Arial, sans-serif">Helvetica</option>
-                        <option value="'Gallaudet', 'Noto Sans', Arial, sans-serif">Gallaudet TrueType</option>
+                        <option value="'Gallaudet', 'Noto Sans', Arial, sans-serif">Gallaudet ASL Font</option>
                         <option value="Georgia, serif">Georgia</option>
                         <option value="Verdana, sans-serif">Verdana</option>
                         <option value="Tahoma, sans-serif">Tahoma</option>
@@ -1513,52 +1589,73 @@
 
     <!-- About Modal -->
     <div class="modal" id="aboutModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-info-circle"></i> About Animate Studio</h2>
-                <button class="close-btn">&times;</button>
+        <div class="modal-content" style="max-width: 700px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: transparent; border: none; text-align: center; padding: 30px 30px 20px;">
+                <h2 style="margin: 0; font-size: 2.5em; text-shadow: 0 2px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; gap: 15px;">
+                    <i class="fas fa-video" style="color: #ffd700; font-size: 1.2em;"></i> 
+                    Animate Studio
+                </h2>
+                <button class="close-btn" style="color: white; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); font-size: 24px; width: 40px; height: 40px;">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="about-content">
-                    <div class="version-info">
-                        <span class="version-badge">v1.05</span>
-                        <span class="status-badge">Free</span>
+            <div class="modal-body" style="padding: 0 30px 30px;">
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin: 20px 0; backdrop-filter: blur(10px);">
+                    <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+                        <span style="background: linear-gradient(45deg, #4caf50, #45a049); color: white; padding: 8px 16px; border-radius: 25px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 15px rgba(76,175,80,0.3);">v1.06 Professional</span>
+                        <span style="background: linear-gradient(45deg, #ff6b35, #f7931e); color: white; padding: 8px 16px; border-radius: 25px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 15px rgba(255,107,53,0.3);">100% Free</span>
                     </div>
-                    <p class="description">
-                        Professional animation studio with advanced features, effects, and unified frame-style GUI.
-                    </p>
-                    <p class="description">
-                        <strong>v1.05 Updates:</strong> Fixed zoom functionality, unified toolbar styling, improved canvas positioning, enhanced frame drag-and-drop, optimized drawing tools performance.
-                    </p>
-                    <p class="description">
-                        Coded by Richard Noble
-                    </p>
-                    <div class="features-grid">
-                        <div class="feature-item">
-                            <i class="fas fa-paint-brush"></i>
-                            <span>Advanced Drawing Tools</span>
+                    
+                    <div style="text-align: center; margin: 25px 0;">
+                        <h3 style="margin: 0 0 15px; font-size: 1.8em; color: #ffd700;">Professional Animation Studio</h3>
+                        <p style="font-size: 1.2em; margin: 15px 0; line-height: 1.6; opacity: 0.95;">Create stunning animations with advanced tools, layer management, and professional workflows.</p>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-code" style="color: #4ecdc4; font-size: 1.5em;"></i>
+                            <h4 style="margin: 0; font-size: 1.3em;">Developed by Richard Noble</h4>
                         </div>
-                        <div class="feature-item">
-                            <i class="fas fa-layer-group"></i>
-                            <span>Layer Management</span>
+                        <p style="margin: 0; opacity: 0.9; text-align: center;">Built with passion for the animation community</p>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin: 20px 0;">
+                    <h4 style="color: #ffd700; margin: 0 0 20px; text-align: center; font-size: 1.4em;"><i class="fas fa-star"></i> Professional Features</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-paint-brush" style="color: #ff6b6b; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">Advanced Drawing</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Professional tools & brushes</p>
                         </div>
-                        <div class="feature-item">
-                            <i class="fas fa-film"></i>
-                            <span>Frame Animation</span>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-layer-group" style="color: #4ecdc4; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">Layer System</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Multi-layer management</p>
                         </div>
-                        <div class="feature-item">
-                            <i class="fas fa-arrows-alt"></i>
-                            <span>Transform Tools</span>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-film" style="color: #ffd93d; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">Frame Animation</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Timeline & onion skinning</p>
                         </div>
-                        <div class="feature-item">
-                            <i class="fas fa-download"></i>
-                            <span>Export Options</span>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-magic" style="color: #a8e6cf; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">Effects & Filters</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Rain, snow, fire effects</p>
                         </div>
-                        <div class="feature-item">
-                            <i class="fas fa-undo"></i>
-                            <span>Undo/Redo</span>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-download" style="color: #ff8a80; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">Export Options</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">PNG sequences & projects</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                            <i class="fas fa-universal-access" style="color: #b39ddb; font-size: 2em; margin-bottom: 10px;"></i>
+                            <h5 style="margin: 0 0 5px; color: white;">ASL Support</h5>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Gallaudet font included</p>
                         </div>
                     </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <p style="margin: 0; opacity: 0.8; font-size: 14px;">Thank you for using Animate Studio!</p>
                 </div>
             </div>
         </div>
@@ -1919,7 +2016,7 @@
                     </div>
                     <div class="tablet-control-group">
                         <label>Font Size: <span id="tabletFontSizeValue">24</span></label>
-                        <input type="range" id="tabletFontSize" min="10" max="100" value="24">
+                        <input type="range" id="tabletFontSize" min="8" max="200" value="24">
                     </div>
                     <div class="tablet-control-group">
                         <label>Font Family</label>
@@ -2306,21 +2403,35 @@
 
     <!-- Help Modal -->
     <div id="helpModal" class="modal">
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -20px -20px 0; padding: 25px; border-radius: 15px 15px 0 0;">
-                <h2 style="margin: 0; display: flex; align-items: center; gap: 12px;"><i class="fas fa-graduation-cap" style="color: #ffd700;"></i> Animate Studio Tutorial</h2>
-                <button class="close-btn" style="color: white; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3);">&times;</button>
+        <div class="modal-content" style="max-width: 950px; max-height: 90vh; overflow-y: auto; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -20px -20px 0; padding: 30px; border-radius: 20px 20px 0 0; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg.org" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="80" cy="40" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="40" cy="80" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>'); opacity: 0.3;"></div>
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 15px; font-size: 2.2em; text-shadow: 0 2px 15px rgba(0,0,0,0.3); position: relative; z-index: 2;">
+                    <i class="fas fa-graduation-cap" style="color: #ffd700; font-size: 1.1em; text-shadow: 0 0 20px rgba(255,215,0,0.5);"></i> 
+                    Animation Academy
+                </h2>
+                <p style="margin: 10px 0 0; opacity: 0.9; font-size: 1.1em; position: relative; z-index: 2;">Master the art of professional animation</p>
+                <button class="close-btn" style="color: white; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); font-size: 24px; width: 45px; height: 45px; border-radius: 50%; position: relative; z-index: 3; backdrop-filter: blur(10px);">&times;</button>
             </div>
             <div class="modal-body" style="padding: 30px;">
-                <div class="tutorial-nav" style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
-                    <button class="tutorial-tab active" data-tab="basics" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                <div class="tutorial-nav" style="display: flex; gap: 8px; margin-bottom: 30px; flex-wrap: wrap;">
+                    <button class="tutorial-tab active" data-tab="basics" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
                         <i class="fas fa-play-circle"></i> Getting Started
                     </button>
-                    <button class="tutorial-tab" data-tab="tools" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                    <button class="tutorial-tab" data-tab="tools" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
                         <i class="fas fa-tools"></i> Drawing Tools
                     </button>
-                    <button class="tutorial-tab" data-tab="animation" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                    <button class="tutorial-tab" data-tab="animation" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
                         <i class="fas fa-film"></i> Animation
+                    </button>
+                    <button class="tutorial-tab" data-tab="advanced" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
+                        <i class="fas fa-graduation-cap"></i> Advanced
+                    </button>
+                    <button class="tutorial-tab" data-tab="professional" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
+                        <i class="fas fa-crown"></i> Professional
+                    </button>
+                    <button class="tutorial-tab" data-tab="tips" style="background: #f8f9fa; color: #495057; border: 2px solid #e9ecef; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;">
+                        <i class="fas fa-lightbulb"></i> Pro Tips
                     </button>
                 </div>
 
@@ -2350,48 +2461,274 @@
                 </div>
 
                 <div id="tutorial-tools" class="tutorial-content" style="display: none;">
-                    <h3 style="color: #4f46e5;"><i class="fas fa-palette"></i> Drawing Tools Guide</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                        <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px;">
-                            <h4 style="color: #28a745;"><i class="fas fa-arrows-alt"></i> Move Tool</h4>
-                            <p>Select, move, rotate and resize objects</p>
-                            <ul style="font-size: 14px;">
-                                <li>Click objects to select</li>
-                                <li>Drag to move</li>
-                                <li>Use handles to resize/rotate</li>
-                            </ul>
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-palette"></i> Drawing Tools & Layer Guide</h3>
+                    
+                    <div style="background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 5px solid #28a745;">
+                        <h4 style="color: #1b5e20; margin: 0 0 15px;"><i class="fas fa-layer-group"></i> Layer System Basics</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #28a745; margin: 0 0 8px;">📋 What are Layers?</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Transparent sheets stacked on top of each other. Each drawing element goes on its own layer for easy editing.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #28a745; margin: 0 0 8px;">🔄 Layer Order</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Top layers appear in front. Use Move Up/Down buttons to change stacking order.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #28a745; margin: 0 0 8px;">👁️ Visibility Control</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Click the eye icon to hide/show layers. Hidden layers won't appear in your animation.</p>
+                            </div>
                         </div>
-                        <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px;">
-                            <h4 style="color: #007bff;"><i class="fas fa-pencil-alt"></i> Pencil Tool</h4>
-                            <p>Draw freehand lines and sketches</p>
-                            <ul style="font-size: 14px;">
-                                <li>Click and drag to draw</li>
-                                <li>Adjust brush size</li>
-                                <li>Change opacity</li>
-                            </ul>
+                    </div>
+                    
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #495057; margin: 0 0 15px;"><i class="fas fa-tools"></i> Essential Drawing Tools</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #28a745;">
+                                <h5 style="color: #28a745; margin: 0 0 8px;"><i class="fas fa-arrows-alt"></i> Move Tool</h5>
+                                <p style="margin: 0 0 8px; font-size: 13px; color: #6c757d;">Select, move, rotate and resize objects on layers</p>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 12px;">
+                                    <li>Click objects to select them</li>
+                                    <li>Drag to move around canvas</li>
+                                    <li>Use corner handles to resize</li>
+                                    <li>Green handle to rotate</li>
+                                </ul>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #007bff;">
+                                <h5 style="color: #007bff; margin: 0 0 8px;"><i class="fas fa-pencil-alt"></i> Pencil Tool</h5>
+                                <p style="margin: 0 0 8px; font-size: 13px; color: #6c757d;">Draw freehand lines and sketches</p>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 12px;">
+                                    <li>Click and drag to draw</li>
+                                    <li>Each stroke creates new layer</li>
+                                    <li>Adjust brush size in sidebar</li>
+                                    <li>Change opacity for transparency</li>
+                                </ul>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #dc3545;">
+                                <h5 style="color: #dc3545; margin: 0 0 8px;"><i class="fas fa-eraser"></i> Eraser Tool</h5>
+                                <p style="margin: 0 0 8px; font-size: 13px; color: #6c757d;">Remove parts of drawings cleanly</p>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 12px;">
+                                    <li>Drag over areas to erase</li>
+                                    <li>Only affects current layer</li>
+                                    <li>Adjust eraser size as needed</li>
+                                    <li>Creates transparent holes</li>
+                                </ul>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #6f42c1;">
+                                <h5 style="color: #6f42c1; margin: 0 0 8px;"><i class="fas fa-shapes"></i> Shape Tools</h5>
+                                <p style="margin: 0 0 8px; font-size: 13px; color: #6c757d;">Create perfect geometric shapes</p>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 12px;">
+                                    <li>Drag to set size and position</li>
+                                    <li>Each shape on separate layer</li>
+                                    <li>Primary color for outline</li>
+                                    <li>Secondary color for fill</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 20px; border-radius: 15px; border-left: 5px solid #ff9800;">
+                        <h4 style="color: #e65100; margin: 0 0 15px;"><i class="fas fa-lightbulb"></i> Layer Pro Tips</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <strong style="color: #e65100;">📝 Naming Layers</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 13px;">Double-click layer names to rename them. Use clear names like "Character Head" or "Background Trees"</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <strong style="color: #e65100;">📁 Grouping Layers</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 13px;">Select multiple layers (Shift+click) then click Group button to organize related elements</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <strong style="color: #e65100;">🎨 Layer Opacity</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 13px;">Click opacity button to cycle through 100%, 75%, 50%, 25% transparency levels</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="tutorial-animation" class="tutorial-content" style="display: none;">
-                    <h3 style="color: #4f46e5;"><i class="fas fa-film"></i> Animation Workflow</h3>
-                    <div style="background: #e3f2fd; padding: 25px; border-radius: 15px;">
-                        <h4 style="color: #1565c0;"><i class="fas fa-play-circle"></i> Frame-by-Frame Animation</h4>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-film"></i> Animation Mastery</h3>
+                    
+                    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 5px solid #2196f3;">
+                        <h4 style="color: #1565c0; margin: 0 0 15px;"><i class="fas fa-play-circle"></i> Frame-by-Frame Animation</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                             <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
                                 <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">1</div>
-                                <strong>Create Frame</strong>
-                                <p style="font-size: 14px;">Click "Add Frame"</p>
+                                <strong>Plan Your Animation</strong>
+                                <p style="font-size: 12px; margin: 8px 0 0;">Sketch keyframes first</p>
                             </div>
                             <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
                                 <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">2</div>
-                                <strong>Draw Content</strong>
-                                <p style="font-size: 14px;">Add drawings</p>
+                                <strong>Create Keyframes</strong>
+                                <p style="font-size: 12px; margin: 8px 0 0;">Main poses and positions</p>
                             </div>
                             <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
                                 <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">3</div>
-                                <strong>Preview</strong>
-                                <p style="font-size: 14px;">Click Play</p>
+                                <strong>Add In-betweens</strong>
+                                <p style="font-size: 12px; margin: 8px 0 0;">Smooth transitions</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #2196f3; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">4</div>
+                                <strong>Polish & Timing</strong>
+                                <p style="font-size: 12px; margin: 8px 0 0;">Adjust speed and flow</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #495057; margin: 0 0 15px;"><i class="fas fa-clock"></i> Timing & Spacing Principles</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h5 style="color: #28a745; margin: 0 0 10px;">⏱️ Frame Rates</h5>
+                                <ul style="margin: 0; padding-left: 20px; color: #6c757d; font-size: 14px;">
+                                    <li><strong>12 FPS:</strong> Traditional animation, choppy but expressive</li>
+                                    <li><strong>24 FPS:</strong> Smooth cinematic motion</li>
+                                    <li><strong>30 FPS:</strong> TV standard, very smooth</li>
+                                    <li><strong>60 FPS:</strong> Ultra-smooth for games</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 style="color: #007bff; margin: 0 0 10px;">📐 Spacing Rules</h5>
+                                <ul style="margin: 0; padding-left: 20px; color: #6c757d; font-size: 14px;">
+                                    <li><strong>Ease In:</strong> Start slow, accelerate</li>
+                                    <li><strong>Ease Out:</strong> Fast start, slow stop</li>
+                                    <li><strong>Linear:</strong> Constant speed (robotic)</li>
+                                    <li><strong>Bounce:</strong> Overshoot and settle</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Techniques Tab -->
+                <div id="tutorial-advanced" class="tutorial-content" style="display: none;">
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-graduation-cap"></i> Advanced Animation Techniques</h3>
+                    
+                    <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 5px solid #9c27b0;">
+                        <h4 style="color: #6a1b9a; margin: 0 0 15px;"><i class="fas fa-magic"></i> 12 Principles of Animation</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">1. Squash & Stretch</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Deform objects to show impact, weight, and flexibility. A bouncing ball squashes on impact.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">2. Anticipation</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Prepare the audience for action. A character crouches before jumping.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">3. Staging</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Direct attention to what's important. Clear silhouettes and composition.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">4. Follow Through</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Parts continue moving after main action stops. Hair, clothes, tails.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">5. Overlapping Action</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Different parts move at different rates. Natural, organic motion.</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #9c27b0; margin: 0 0 8px;">6. Arcs</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Most natural actions follow curved paths, not straight lines.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #495057; margin: 0 0 15px;"><i class="fas fa-layer-group"></i> Layer Management Mastery</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #28a745;">
+                                <h5 style="color: #28a745; margin: 0 0 8px;">🎭 Character Separation</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Put each character on separate layers for independent animation and easy editing.</p>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #007bff;">
+                                <h5 style="color: #007bff; margin: 0 0 8px;">🌅 Background Layers</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Create depth with foreground, midground, and background layers at different opacities.</p>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #dc3545;">
+                                <h5 style="color: #dc3545; margin: 0 0 8px;">✨ Effect Layers</h5>
+                                <p style="margin: 0; font-size: 13px; color: #6c757d;">Use separate layers for lighting, shadows, and special effects that can be toggled.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); padding: 20px; border-radius: 15px; border-left: 5px solid #4caf50;">
+                        <h4 style="color: #2e7d32; margin: 0 0 15px;"><i class="fas fa-stack-overflow"></i> Layer Organization Workflow</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #4caf50; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">1</div>
+                                <strong style="color: #2e7d32;">Create Base Layer</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Background elements first</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #4caf50; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">2</div>
+                                <strong style="color: #2e7d32;">Add Characters</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Each on separate layers</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #4caf50; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">3</div>
+                                <strong style="color: #2e7d32;">Group Related</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Organize with folders</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="background: #4caf50; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">4</div>
+                                <strong style="color: #2e7d32;">Name Everything</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Clear, descriptive names</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Professional Workflows Tab -->
+                <div id="tutorial-professional" class="tutorial-content" style="display: none;">
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-crown"></i> Professional Workflows</h3>
+                    
+                    <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 5px solid #ff9800;">
+                        <h4 style="color: #e65100; margin: 0 0 15px;"><i class="fas fa-project-diagram"></i> Production Pipeline</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #ff9800;">
+                                <div style="background: #ff9800; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">1</div>
+                                <strong style="color: #e65100;">Pre-Production</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Concept, storyboard, character design</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #ff9800;">
+                                <div style="background: #ff9800; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">2</div>
+                                <strong style="color: #e65100;">Production</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Layout, animation, cleanup</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #ff9800;">
+                                <div style="background: #ff9800; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold;">3</div>
+                                <strong style="color: #e65100;">Post-Production</strong>
+                                <p style="margin: 8px 0 0; color: #6c757d; font-size: 12px;">Effects, compositing, sound</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pro Tips Tab -->
+                <div id="tutorial-tips" class="tutorial-content" style="display: none;">
+                    <h3 style="color: #4f46e5; margin-bottom: 20px;"><i class="fas fa-lightbulb"></i> Professional Tips & Tricks</h3>
+                    
+                    <div style="background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 5px solid #ffc107;">
+                        <h4 style="color: #f57c00; margin: 0 0 15px;"><i class="fas fa-rocket"></i> Performance Optimization</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #f57c00; margin: 0 0 8px;">🚀 Speed Boosters</h5>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 13px;">
+                                    <li>Use lower resolution for rough animation</li>
+                                    <li>Hide unnecessary layers while working</li>
+                                    <li>Work in sections, not full scenes</li>
+                                    <li>Use simple shapes for blocking</li>
+                                </ul>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 10px;">
+                                <h5 style="color: #f57c00; margin: 0 0 8px;">💾 Memory Management</h5>
+                                <ul style="margin: 0; padding-left: 15px; color: #6c757d; font-size: 13px;">
+                                    <li>Delete unused frames and layers</li>
+                                    <li>Optimize image sizes before import</li>
+                                    <li>Use groups to organize complex scenes</li>
+                                    <li>Clear browser cache if sluggish</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -2498,8 +2835,82 @@
             
             // Initialize animation maker
             window.animationMaker = new AnimationMaker();
+            
+            // Real-time text updates
+            const fontSizeSlider = document.getElementById('fontSize');
+            const fontFamilySelect = document.getElementById('fontFamily');
+            
+            fontSizeSlider.addEventListener('input', function() {
+                const size = this.value;
+                document.getElementById('fontSizeValue').textContent = size;
+                
+                if (window.animationMaker && window.animationMaker.selectedObject && window.animationMaker.selectedObject.type === 'text') {
+                    window.animationMaker.selectedObject.fontSize = parseInt(size);
+                    window.animationMaker.redrawCanvas();
+                    
+                    const layerName = document.querySelector('.layer-item.selected .layer-name');
+                    if (layerName) {
+                        layerName.textContent = `${window.animationMaker.selectedObject.text} (${size}px)`;
+                    }
+                }
+            });
+            
+            fontFamilySelect.addEventListener('change', function() {
+                if (window.animationMaker && window.animationMaker.selectedObject && window.animationMaker.selectedObject.type === 'text') {
+                    window.animationMaker.selectedObject.fontFamily = this.value;
+                    window.animationMaker.redrawCanvas();
+                }
+            });
         });
     </script>
 </body>
 </html>
-    <input type="file" id="imageInput" accept=".png,.gif,.jpeg,.jpg" style="display: none;">
+<!-- Remove misplaced HTML and script after closing </html> tag -->
+// Real-time text updates
+function updateTextLive() {
+    const fontSize = document.getElementById('fontSize').value;
+    const fontFamily = document.getElementById('fontFamily').value;
+    
+    // Update font size display
+    document.getElementById('fontSizeValue').textContent = fontSize;
+    
+    // Update selected text objects on canvas
+    if (window.animationMaker && window.animationMaker.selectedObjects) {
+        window.animationMaker.selectedObjects.forEach(obj => {
+            if (obj.type === 'text') {
+                obj.fontSize = parseInt(fontSize);
+                obj.fontFamily = fontFamily;
+                
+                // Update layer name to show text content and size
+                const layerElement = document.querySelector(`[data-layer-id="${obj.layerId}"] .layer-name`);
+                if (layerElement) {
+                    layerElement.textContent = `Text: "${obj.text}" (${fontSize}px)`;
+                }
+            }
+        });
+        
+        // Redraw canvas
+        window.animationMaker.redrawCanvas();
+    }
+}
+
+// Tablet controls sync
+document.addEventListener('DOMContentLoaded', function() {
+    const tabletFontSize = document.getElementById('tabletFontSize');
+    const tabletFontFamily = document.getElementById('tabletFontFamily');
+    
+    if (tabletFontSize) {
+        tabletFontSize.addEventListener('input', function() {
+            document.getElementById('fontSize').value = this.value;
+            updateTextLive();
+        });
+    }
+    
+    if (tabletFontFamily) {
+        tabletFontFamily.addEventListener('change', function() {
+            document.getElementById('fontFamily').value = this.value;
+            updateTextLive();
+        });
+    }
+});
+</script>
